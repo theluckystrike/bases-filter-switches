@@ -1,0 +1,22 @@
+# Task board: the switches under the toolbar edit the top-level filters below.
+filters:
+  and:
+    - file.inFolder("Bases Filter Switches/Tasks")
+views:
+  - type: table
+    name: All tasks
+    order:
+      - file.name
+      - status
+      - priority
+      - area
+filterSwitches:
+  groups:
+    - name: Status
+      switches:
+        - label: Todo
+          filter: status == "todo"
+        - label: Doing
+          filter: status == "doing"
+        - label: Done
+          filter: status == "done"

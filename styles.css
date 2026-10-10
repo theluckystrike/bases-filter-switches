@@ -1,0 +1,70 @@
+/* Bases Filter Switches: one row of chips under the Bases toolbar. Theme variables only. */
+.fsw-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-4-1) 0 var(--size-4-2);
+	font-size: var(--font-ui-small);
+}
+
+.fsw-group {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-4-1);
+	padding-right: var(--size-4-2);
+	border-right: var(--border-width) solid var(--background-modifier-border);
+}
+
+.fsw-group-name {
+	color: var(--text-muted);
+	margin-right: var(--size-2-1);
+}
+
+.fsw-bar button.fsw-chip,
+.fsw-bar button.fsw-button {
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-2);
+	border-radius: var(--radius-l);
+	border: var(--border-width) solid var(--background-modifier-border);
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	box-shadow: none;
+	font-size: var(--font-ui-small);
+	line-height: var(--line-height-tight);
+	cursor: var(--cursor);
+}
+
+.fsw-bar button.fsw-chip:hover,
+.fsw-bar button.fsw-button:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.fsw-bar button.fsw-chip.is-active {
+	background-color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.fsw-bar button.fsw-chip.is-active:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.fsw-bar button:focus-visible {
+	box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+	outline: none;
+}
+
+.fsw-bar button.fsw-add {
+	color: var(--text-muted);
+	border-style: dashed;
+}
+
+.fsw-bar.fsw-empty button.fsw-add {
+	opacity: 0.7;
+}
+
+.fsw-more {
+	color: var(--text-faint);
+}

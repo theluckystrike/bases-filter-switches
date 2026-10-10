@@ -1,0 +1,87 @@
+[
+	{
+		"feature": "base-file",
+		"caption": "Two switches of the Status group are on: the base shows the notes that are todo or doing.",
+		"note": "Tasks.base",
+		"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Todo\")?.click(); await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Doing\")?.click(); await new Promise((r) => setTimeout(r, 700)); return 'ok'; })()",
+		"wait": 900
+	},
+	{
+		"feature": "embedded-base",
+		"caption": "The same switches under a base embedded in a note.",
+		"note": "Weekly review.md",
+		"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"All\")?.click(); await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Done\")?.click(); await new Promise((r) => setTimeout(r, 700)); return 'ok'; })()",
+		"wait": 900
+	},
+	{
+		"feature": "add-switch",
+		"caption": "Add a filter switch: a group, a label and a filter, or pick a filter the base already has.",
+		"note": "Tasks.base",
+		"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); app.commands.executeCommandById('bases-filter-switches:add-switch'); await new Promise((r) => setTimeout(r, 700)); const i = [...document.querySelectorAll('.modal input[type=text]')]; i[0].value = 'Status'; i[1].value = 'Waiting'; i[2].value = 'status == \"waiting\"';  return 'ok'; })()",
+		"after": "document.querySelector('.modal-container .modal')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); 'ok'",
+		"wait": 900
+	},
+	{
+		"feature": "light-theme",
+		"caption": "The switches use the colors of the theme, here the light theme.",
+		"note": "Tasks.base",
+		"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); app.changeTheme('moonstone'); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Doing\")?.click(); await new Promise((r) => setTimeout(r, 700)); return 'ok'; })()",
+		"after": "app.changeTheme('system'); 'ok'",
+		"wait": 1200
+	},
+	{
+		"feature": "property-values",
+		"caption": "Pro: the Area group has one switch for each value of the area property.",
+		"note": "Tasks.base",
+		"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); const p = app.plugins.plugins['bases-filter-switches']; p.pro.opts.http = async () => ({ status: 200, json: { data: { viewer: { login: 'demo-reader' }, user: { sponsorshipForViewerAsSponsor: { isActive: true, isOneTimePayment: false, tier: { name: '$5 a month', monthlyPriceInCents: 500 } } } } } }); app.secretStorage.setSecret('bases-filter-switches-github-token', 'gho_' + '0'.repeat(36)); await p.pro.refreshNow(); await app.vault.process(app.vault.getAbstractFileByPath('Bases Filter Switches/Tasks.base'), (t) => t + \"    - name: Area\\n      property: area\\n  presets:\\n    - name: Open work\\n      on: [Status/Todo, Status/Doing, Area/work]\\n    - name: Finished\\n      on: [Status/Done]\\n\"); await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"work\")?.click(); await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Todo\")?.click(); await new Promise((r) => setTimeout(r, 700)); return 'ok'; })()",
+		"after": "app.plugins.plugins['bases-filter-switches'].pro.signOut(); 'ok'",
+		"wait": 1200
+	},
+	{
+		"feature": "presets",
+		"caption": "Pro: the command of the preset Open work turns on Todo, Doing and work at once.",
+		"note": "Tasks.base",
+		"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); const p = app.plugins.plugins['bases-filter-switches']; p.pro.opts.http = async () => ({ status: 200, json: { data: { viewer: { login: 'demo-reader' }, user: { sponsorshipForViewerAsSponsor: { isActive: true, isOneTimePayment: false, tier: { name: '$5 a month', monthlyPriceInCents: 500 } } } } } }); app.secretStorage.setSecret('bases-filter-switches-github-token', 'gho_' + '0'.repeat(36)); await p.pro.refreshNow(); await app.vault.process(app.vault.getAbstractFileByPath('Bases Filter Switches/Tasks.base'), (t) => t + \"    - name: Area\\n      property: area\\n  presets:\\n    - name: Open work\\n      on: [Status/Todo, Status/Doing, Area/work]\\n    - name: Finished\\n      on: [Status/Done]\\n\"); await new Promise((r) => setTimeout(r, 700)); app.commands.executeCommandById(Object.keys(app.commands.commands).find((k) => app.commands.commands[k].name.includes('Apply preset Open work'))); await new Promise((r) => setTimeout(r, 700)); return 'ok'; })()",
+		"after": "app.plugins.plugins['bases-filter-switches'].pro.signOut(); 'ok'",
+		"wait": 1200
+	},
+	{
+		"feature": "settings",
+		"caption": "Settings: the Pro section before sign in, and the add button on bases without switches.",
+		"eval": "(async () => { app.plugins.plugins['bases-filter-switches'].pro.signOut(); app.setting.open(); app.setting.openTabById('bases-filter-switches'); return 'ok'; })()",
+		"after": "app.setting.close(); 'ok'"
+	},
+	{
+		"feature": "pro-settings",
+		"caption": "The Pro section after sign in with a sponsoring account: login, tier, Refresh and Sign out.",
+		"eval": "(async () => { const p = app.plugins.plugins['bases-filter-switches']; p.pro.opts.http = async () => ({ status: 200, json: { data: { viewer: { login: 'demo-reader' }, user: { sponsorshipForViewerAsSponsor: { isActive: true, isOneTimePayment: false, tier: { name: '$5 a month', monthlyPriceInCents: 500 } } } } } }); app.secretStorage.setSecret('bases-filter-switches-github-token', 'gho_' + '0'.repeat(36)); await p.pro.refreshNow(); app.setting.open(); app.setting.openTabById('bases-filter-switches'); return 'ok'; })()",
+		"after": "app.setting.close(); app.plugins.plugins['bases-filter-switches'].pro.signOut(); 'ok'"
+	},
+	{
+		"feature": "bases-filter-switches",
+		"caption": "One click per switch: Todo, then Doing, then All to show every note, then Done.",
+		"frames": [
+			{
+				"note": "Tasks.base",
+				"eval": "(async () => { await new Promise((r) => setTimeout(r, 700));  return 'ok'; })()",
+				"hold": 1500
+			},
+			{
+				"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Todo\")?.click(); await new Promise((r) => setTimeout(r, 700)); return 'ok'; })()",
+				"hold": 1200
+			},
+			{
+				"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Doing\")?.click(); await new Promise((r) => setTimeout(r, 700)); return 'ok'; })()",
+				"hold": 1200
+			},
+			{
+				"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"All\")?.click(); await new Promise((r) => setTimeout(r, 700)); return 'ok'; })()",
+				"hold": 1200
+			},
+			{
+				"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Done\")?.click(); await new Promise((r) => setTimeout(r, 700)); return 'ok'; })()",
+				"hold": 1600
+			}
+		]
+	}
+]

@@ -1,0 +1,11 @@
+{
+	"id": "bases-filter-switches",
+	"name": "Bases Filter Switches",
+	"version": "1.0.0",
+	"minAppVersion": "1.13.4",
+	"description": "One-click switches above a base that turn saved filters on and off, in base tabs and embedded bases.",
+	"author": "Michael Lip",
+	"authorUrl": "https://github.com/theluckystrike",
+	"fundingUrl": "https://github.com/sponsors/theluckystrike",
+	"isDesktopOnly": false
+}

@@ -1,0 +1,27 @@
+filters:
+  and:
+    - file.inFolder("Bases Filter Switches/Tasks")
+views:
+  - type: table
+    name: All
+filterSwitches:
+  groups:
+    - name: Status
+      switches:
+        - label: Todo
+          filter: status == "todo"
+        - label: Doing
+          filter: status == "doing"
+        - label: Done
+          filter: status == "done"
+        - label: Waiting
+          filter: status == "waiting"
+    - name: Priority
+      switches:
+        - label: High
+          filter: priority == "high"
+    - name: Area
+      property: area
+  presets:
+    - name: Open work
+      on: [Status/Todo, Status/Doing, Area/work]
