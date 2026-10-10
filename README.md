@@ -4,7 +4,7 @@ Bases Filter Switches puts a row of one-click switches under the toolbar of a ba
 
 The switches work in base files and in bases embedded in notes. They work with every layout, the table, cards, list and the layouts of other plugins, because a switch changes the filter of the base itself.
 
-The free version gives each base one group of up to 3 switches. Pro removes the limit, adds presets with a command for each, and builds switches from the values of a property. Pro costs $5 a month or $15 once, through GitHub Sponsors.
+The free version gives each base one group of up to 3 switches. Pro removes the limit, adds presets with a command for each, and builds switches from the values of a property. Pro costs $5 a month, or $15 once, through GitHub Sponsors. When you have paid $15 in total, Pro stays on.
 
 ## Features
 
@@ -82,11 +82,11 @@ filterSwitches:
 
 The free version is useful on its own: one group of up to 3 switches in every base. Pro adds unlimited switches and groups, presets with a command for each, and switches built from the values of a property. If a base has more switches than the free version shows, the row says how many more there are. Those switches stay in the file and come back when Pro is on.
 
-1. Sponsor [theluckystrike on GitHub Sponsors](https://github.com/sponsors/theluckystrike) with $5 a month or more, or with $15 or more once. A one-time sponsorship of $15 or more unlocks Pro for life.
+1. Sponsor [theluckystrike on GitHub Sponsors](https://github.com/sponsors/theluckystrike) with $5 a month, or $15 once. When you have paid $15 in total, Pro stays on.
 2. In Obsidian, open the settings of Bases Filter Switches and select "Sign in with GitHub".
 3. The plugin copies a code and opens github.com/login/device. Paste the code there and approve.
 
-If you sponsor after you sign in, select Refresh. If a monthly sponsorship ends, Pro turns off at the next check, within 7 days.
+If you sponsor after you sign in, select Refresh. If a monthly sponsorship ends before you have paid $15 in total, Pro turns off at the next check, within 7 days.
 
 ## Settings
 
