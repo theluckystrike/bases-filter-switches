@@ -1,5 +1,11 @@
 # bases-filter-switches
 
+## 1.1.1
+
+### Patch Changes
+
+- 9abd156: Editing the filter of a switch that is on now replaces the old filter in the base, preset commands apply the preset as it is saved now, free switch rows keep hidden switches in their group, empty `filters` or `and` keys no longer get an empty item, and the README claims match the code.
+
 ## 1.1.0
 
 ### Minor Changes

@@ -21,6 +21,8 @@ import {
 	selectionKeys,
 	switchesFromValues,
 	toggle,
+	topFilters,
+	editSwitch,
 	type GroupDef,
 } from '../src/basefile';
 
@@ -223,5 +225,39 @@ describe('default switches (Pro)', () => {
 		const t = saveDefault(BASE, ['Status/Todo']);
 		const out = runOp(t, 'default', []);
 		expect(readSelection(out, readConfig(t).groups).Status).toEqual(['Todo']);
+	});
+});
+
+describe('edge cases of hand-written base files', () => {
+	const g: GroupDef[] = [{ name: 'S', switches: [{ label: 'A', filter: 'a == 1' }] }];
+	it('an empty filters key gets an and list without an empty item', () => {
+		expect(applySelection('filters:\nviews: []\n', g, { S: ['A'] })).toBe('filters:\n  and:\n    - a == 1\nviews: []\n');
+	});
+	it('an empty and list key gets the switch as its only item', () => {
+		expect(applySelection('filters:\n  and:\nviews: []\n', g, { S: ['A'] })).toBe('filters:\n  and:\n    - a == 1\nviews: []\n');
+	});
+	it('reads number labels and group names typed by hand', () => {
+		const t = 'filterSwitches:\n  groups:\n    - name: 2024\n      switches:\n        - label: 1\n          filter: x == 1\n';
+		expect(readConfig(t).groups).toEqual([{ name: '2024', switches: [{ label: '1', filter: 'x == 1' }] }]);
+	});
+});
+
+describe('editSwitch', () => {
+	const T = `filters:\n  and:\n    - file.inFolder("Tasks")\n    - status == "todo"\nfilterSwitches:\n  groups:\n    - name: Status\n      single: true\n      switches:\n        - label: Todo\n          filter: status == "todo"\n`;
+	it('a new filter for a switch that is on replaces the old filter in the base', () => {
+		const out = editSwitch(T, { group: 'Status', label: 'Todo' }, { group: 'Status', label: 'Todo', filter: 'status == "open"' });
+		expect(topFilters(out)).toEqual(['file.inFolder("Tasks")', 'status == "open"']);
+		expect(readSelection(out, readConfig(out).groups).Status).toEqual(['Todo']);
+		expect(readConfig(out).groups).toEqual([{ name: 'Status', single: true, switches: [{ label: 'Todo', filter: 'status == "open"' }] }]);
+	});
+	it('a new label for a switch that is on keeps it on', () => {
+		const out = editSwitch(T, { group: 'Status', label: 'Todo' }, { group: 'Status', label: 'Open', filter: 'status == "todo"' });
+		expect(topFilters(out)).toEqual(['file.inFolder("Tasks")', 'status == "todo"']);
+		expect(readSelection(out, readConfig(out).groups).Status).toEqual(['Open']);
+	});
+	it('a switch that is off stays off', () => {
+		const off = runOp(T, 'toggle', ['Status', 'Todo']);
+		const out = editSwitch(off, { group: 'Status', label: 'Todo' }, { group: 'Status', label: 'Todo', filter: 'status == "open"' });
+		expect(topFilters(out)).toEqual(['file.inFolder("Tasks")']);
 	});
 });

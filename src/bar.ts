@@ -48,15 +48,18 @@ export class SwitchBar {
 		if (seq !== this.renderSeq) return; // a newer render started while this one read the file
 		const raw = readConfig(text);
 		this.hasProperty = raw.groups.some((g) => g.property !== undefined);
-		const { config, hidden } = limitConfig(this.host.resolve(raw), isPro());
-		const selection = readSelection(text, config.groups);
+		const resolved = this.host.resolve(raw);
+		const { config, hidden } = limitConfig(resolved, isPro());
+		// Reads and writes use every group, so a switch that the free version hides is never cut off from its group.
+		const all = resolved.groups;
+		const selection = readSelection(text, all);
 		const focused = this.el.contains(activeDocument.activeElement) ? activeDocument.activeElement?.getAttribute('data-fsw-key') : null;
 		this.el.empty();
 		const empty = config.groups.every((g) => g.switches.length === 0);
 		this.el.toggleClass('fsw-empty', empty);
 		if (empty && hidden === 0 && !this.host.showAdd()) return;
-		for (const g of config.groups) if (g.switches.length > 0) this.renderGroup(g, config.groups, selection);
-		if (config.presets.length > 0 || isPro()) this.renderPresets(config.presets, selection, empty, config.groups, isPro() ? readDefault(text) : []);
+		for (const g of config.groups) if (g.switches.length > 0) this.renderGroup(g, all, selection);
+		if (config.presets.length > 0 || isPro()) this.renderPresets(config.presets, selection, empty, all, isPro() ? readDefault(text) : []);
 		if (hidden > 0) this.el.createSpan({ cls: 'fsw-more', text: `${hidden} more with Pro` });
 		this.button('fsw-add', '+', 'add', empty ? 'Add a filter switch' : 'Add another filter switch', () => this.host.addSwitch(this.file)).setText(empty ? '+ Filter switch' : '+');
 		const again = focused ? this.el.querySelector<HTMLElement>(`[data-fsw-key="${CSS.escape(focused)}"]`) : null;

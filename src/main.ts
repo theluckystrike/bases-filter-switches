@@ -5,6 +5,7 @@ import {
 	applySelection,
 	clearDefault,
 	defaultSelection,
+	editSwitch,
 	FREE_GROUPS,
 	FREE_SWITCHES,
 	hasDefault,
@@ -220,6 +221,12 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 		await this.write(file, (t) => applySelection(t, groups, presetSelection(groups, preset)));
 	}
 
+	async applyPresetByName(file: TFile, name: string): Promise<void> {
+		const preset = readConfig(await this.read(file)).presets.find((p) => p.name === name);
+		if (preset) await this.applyPreset(file, preset);
+		else new Notice(`This base has no preset ${name}.`);
+	}
+
 	savePreset(file: TFile): void {
 		if (!this.needPro('Presets')) return;
 		new NameModal(this.app, 'Save switches as preset', 'Preset name', async (name) => {
@@ -293,11 +300,7 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 			new Notice(error);
 			return false;
 		}
-		await this.write(file, (t) => {
-			const groups = readConfig(t).groups;
-			const base = edit && (edit.label !== d.label || edit.group !== d.group) ? removeSwitch(t, groups, edit.group, edit.label) : t;
-			return addSwitch(base, d.group, { label: d.label, filter: d.filter });
-		});
+		await this.write(file, (t) => (edit ? editSwitch(t, edit, d) : addSwitch(t, d.group, { label: d.label, filter: d.filter })));
 		return true;
 	}
 
@@ -368,7 +371,8 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 		}
 		for (const [id, { file, preset }] of wanted) {
 			if (this.presetIds.has(id)) continue;
-			this.addCommand({ id, name: `Apply preset ${preset.name} to ${file.basename}`, callback: () => void this.applyPreset(file, preset) });
+			// The command reads the preset when it runs: a preset saved again under the same name keeps its id.
+			this.addCommand({ id, name: `Apply preset ${preset.name} to ${file.basename}`, callback: () => void this.applyPresetByName(file, preset.name) });
 			this.presetIds.add(id);
 		}
 	}

@@ -21,7 +21,7 @@
 // a switch is on when its filter text is an item of the top-level "and" list (one switch of a group), or when an
 // "or" item of that list holds only filters of one group (several switches of a group). Turning switches on and
 // off edits only those items, through the YAML document model, so comments, key order and quoting stay.
-import { isMap, isScalar, isSeq, parseDocument, type Document, type Node, type YAMLMap, type YAMLSeq } from 'yaml';
+import { isMap, isScalar, isSeq, parseDocument, YAMLSeq, type Document, type Node, type YAMLMap } from 'yaml';
 
 export const KEY = 'filterSwitches';
 export const FREE_SWITCHES = 3;
@@ -48,7 +48,11 @@ export interface SwitchConfig {
 /** Group name -> labels of the switches that are on. */
 export type Selection = Record<string, string[]>;
 
-const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
+const str = (v: unknown): string | null => {
+	// A label or name typed by hand as a number (label: 2024) is still a label.
+	const s = typeof v === 'string' ? v.trim() : typeof v === 'number' && Number.isFinite(v) ? String(v) : '';
+	return s !== '' ? s : null;
+};
 const rec = (v: unknown): Record<string, unknown> | null => (v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 
 export function switchKey(group: string, label: string): string {
@@ -202,7 +206,9 @@ export function applySelection(text: string, groups: GroupDef[], selection: Sele
 		const c = clauseFor(g, selection[g.name] ?? []);
 		if (c !== null) wanted.set(g.name, c);
 	}
-	const node = doc.get('filters', true) as Node | undefined;
+	const raw = doc.get('filters', true) as Node | undefined;
+	// An empty "filters:" key is no filter, not a null filter item.
+	const node = isScalar(raw) && raw.value === null ? undefined : raw;
 	const seq = andSeq(node);
 	const oldItems: unknown[] = seq ? seq.items : node === undefined || node === null ? [] : [node];
 	const placed = new Set<string>();
@@ -225,7 +231,7 @@ export function applySelection(text: string, groups: GroupDef[], selection: Sele
 	if (same(next.map(toJS), oldItems.map(toJS))) return text;
 	if (next.length === 0) doc.delete('filters');
 	else if (seq) seq.items = next;
-	else if (node === undefined && isMap(doc.contents)) (doc.contents.items as unknown[]).unshift(doc.createPair('filters', andNode(doc, next)));
+	else if (raw === undefined && isMap(doc.contents)) (doc.contents.items as unknown[]).unshift(doc.createPair('filters', andNode(doc, next)));
 	else doc.set('filters', andNode(doc, next));
 	return render(doc);
 }
@@ -239,7 +245,14 @@ function andSeq(node: Node | undefined): YAMLSeq | null {
 	if (!isMap(node) || node.items.length !== 1) return null;
 	const pair = node.items[0];
 	const key = isScalar(pair?.key) ? pair.key.value : pair?.key;
-	return key === 'and' && isSeq(pair?.value) ? pair.value : null;
+	if (key !== 'and' || !pair) return null;
+	if (isSeq(pair.value)) return pair.value;
+	// An empty "and:" key is an empty list.
+	const empty = pair.value === null || (isScalar(pair.value) && pair.value.value === null);
+	if (!empty) return null;
+	const seq = new YAMLSeq();
+	pair.value = seq;
+	return seq;
 }
 
 function andNode(doc: Document, items: unknown[]): YAMLMap {
@@ -315,6 +328,24 @@ export function removeSwitch(text: string, groups: GroupDef[], group: string, la
 	if (isSeq(sws)) sws.items = sws.items.filter((s) => !(isMap(s) && str(s.get('label')) === label));
 	if (!isSeq(sws) || sws.items.length === 0) list.items.splice(list.items.indexOf(g), 1);
 	return render(doc);
+}
+
+/**
+ * Changes the group, label or filter of a switch. A switch that is on stays on with its new filter, so the old filter
+ * does not stay in the base as a plain filter.
+ */
+export function editSwitch(text: string, from: { group: string; label: string }, to: { group: string; label: string; filter: string }): string {
+	const before = readConfig(text).groups;
+	const sel = readSelection(text, before);
+	const wasOn = (sel[from.group] ?? []).includes(from.label);
+	const moved = from.group !== to.group || from.label !== to.label;
+	const off = moved ? removeSwitch(text, before, from.group, from.label) : applySelection(text, before, { ...sel, [from.group]: (sel[from.group] ?? []).filter((l) => l !== from.label) });
+	const added = addSwitch(off, to.group, { label: to.label, filter: to.filter });
+	if (!wasOn) return added;
+	const after = readConfig(added).groups;
+	const group = after.find((g) => g.name === to.group);
+	const now = readSelection(added, after);
+	return group && !(now[to.group] ?? []).includes(to.label) ? applySelection(added, after, toggle(now, group, to.label)) : added;
 }
 
 /** Saves a preset (replaces one with the same name). */
