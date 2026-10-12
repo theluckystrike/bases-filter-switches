@@ -46,6 +46,14 @@
 		"wait": 1200
 	},
 	{
+		"feature": "default-switches",
+		"caption": "Pro: Todo is saved as the default, Doing is turned on, then the command of the base applies the default and Todo is on again.",
+		"note": "Tasks.base",
+		"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); const p = app.plugins.plugins['bases-filter-switches']; p.pro.opts.http = async () => ({ status: 200, json: { data: { viewer: { login: 'demo-reader' }, user: { sponsorshipForViewerAsSponsor: { isActive: true, isOneTimePayment: false, tier: { name: '$5 a month', monthlyPriceInCents: 500 } } } } } }); app.secretStorage.setSecret('bases-filter-switches-github-token', 'gho_' + '0'.repeat(36)); await p.pro.refreshNow(); await app.vault.process(app.vault.getAbstractFileByPath('Bases Filter Switches/Tasks.base'), (t) => t + \"    - name: Area\\n      property: area\\n  presets:\\n    - name: Open work\\n      on: [Status/Todo, Status/Doing, Area/work]\\n    - name: Finished\\n      on: [Status/Done]\\n\"); await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Todo\")?.click(); await new Promise((r) => setTimeout(r, 700)); app.commands.executeCommandById(Object.keys(app.commands.commands).find((k) => app.commands.commands[k].name.includes('Save the current switches as the default'))); await new Promise((r) => setTimeout(r, 700)); [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar button')].filter((b) => b.offsetParent).find((b) => b.textContent === \"Doing\")?.click(); await new Promise((r) => setTimeout(r, 700)); app.commands.executeCommandById(Object.keys(app.commands.commands).find((k) => app.commands.commands[k].name.includes('Apply the default switches of the current base'))); await new Promise((r) => setTimeout(r, 700)); document.querySelectorAll('.notice').forEach((n) => n.remove()); return 'ok'; })()",
+		"after": "app.plugins.plugins['bases-filter-switches'].pro.signOut(); 'ok'",
+		"wait": 1200
+	},
+	{
 		"feature": "settings",
 		"caption": "Settings: the Pro section before sign in, and the add button on bases without switches.",
 		"eval": "(async () => { app.plugins.plugins['bases-filter-switches'].pro.signOut(); app.setting.open(); app.setting.openTabById('bases-filter-switches'); return 'ok'; })()",

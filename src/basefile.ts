@@ -15,6 +15,7 @@
 //     presets:                  # Pro
 //       - name: Open work
 //         on: [Status/Todo]
+//     default: [Status/Todo]     # Pro: the switches that "Apply the default switches" turns on
 //
 // The state of the switches is not stored anywhere. It is read from the top-level filters of the base:
 // a switch is on when its filter text is an item of the top-level "and" list (one switch of a group), or when an
@@ -349,6 +350,40 @@ export function selectionKeys(selection: Selection): string[] {
 	return Object.entries(selection).flatMap(([g, labels]) => labels.map((l) => switchKey(g, l)));
 }
 
+/** The saved default keys of a base: [] when there is no default. */
+export function readDefault(text: string): string[] {
+	const data = rec(parseDocument(text).toJS());
+	const own = rec(data?.[KEY]);
+	return (Array.isArray(own?.default) ? own.default : []).map(str).filter((s): s is string => s !== null);
+}
+
+/** True when the base has a saved default list (an empty list is a default too). */
+export function hasDefault(text: string): boolean {
+	return Array.isArray(rec(rec(parseDocument(text).toJS())?.[KEY])?.default);
+}
+
+/** The selection the saved default turns on: every group listed, the others off. Unknown keys are ignored. */
+export function defaultSelection(groups: GroupDef[], keys: string[]): Selection {
+	return presetSelection(groups, { name: 'default', on: keys });
+}
+
+/** Saves the given keys as the default of the base (replaces the old default). */
+export function saveDefault(text: string, keys: string[]): string {
+	const doc = parseDocument(text);
+	const seq = doc.createNode(keys) as YAMLSeq;
+	ownMap(doc).set('default', seq);
+	return render(doc);
+}
+
+/** Removes the saved default. Returns the text unchanged when there is none. */
+export function clearDefault(text: string): string {
+	const doc = parseDocument(text);
+	const own = doc.get(KEY, true);
+	if (!isMap(own) || !own.has('default')) return text;
+	own.delete('default');
+	return render(doc);
+}
+
 /** One click on a chip: toggles it; in a single group it also turns the others off. */
 export function toggle(selection: Selection, group: GroupDef, label: string): Selection {
 	const cur = selection[group.name] ?? [];
@@ -379,5 +414,8 @@ export function runOp(text: string, op: string, args: unknown[]): string {
 		return applySelection(text, groups, presetSelection(groups, preset));
 	}
 	if (op === 'save-preset') return savePreset(text, { name: String(args[0]), on: selectionKeys(readSelection(text, groups)) });
+	if (op === 'save-default') return saveDefault(text, selectionKeys(readSelection(text, groups)));
+	if (op === 'clear-default') return clearDefault(text);
+	if (op === 'default') return hasDefault(text) ? applySelection(text, groups, defaultSelection(groups, readDefault(text))) : text;
 	throw new Error(`unknown op ${op}`);
 }

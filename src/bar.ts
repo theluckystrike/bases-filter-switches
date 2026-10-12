@@ -1,6 +1,6 @@
 // The switch bar: one row of chips under the Bases toolbar, for a .base tab or a ![[x.base]] embed.
 import { Menu, type TFile } from 'obsidian';
-import { limitConfig, readConfig, readSelection, selectionKeys, switchKey, type GroupDef, type PresetDef, type Selection, type SwitchConfig } from './basefile';
+import { limitConfig, readConfig, readDefault, readSelection, selectionKeys, switchKey, type GroupDef, type PresetDef, type Selection, type SwitchConfig } from './basefile';
 import { isPro } from './pro';
 
 export const BAR_CLASS = 'fsw-bar';
@@ -15,6 +15,9 @@ export interface BarHost {
 	applyPreset(file: TFile, preset: PresetDef): Promise<void>;
 	savePreset(file: TFile): void;
 	deletePreset(file: TFile, name: string): Promise<void>;
+	applyDefault(file: TFile, groups: GroupDef[]): Promise<void>;
+	saveDefault(file: TFile): Promise<void>;
+	clearDefault(file: TFile): Promise<void>;
 	addSwitch(file: TFile): void;
 	editSwitch(file: TFile, group: string, label: string, filter: string): void;
 	removeSwitch(file: TFile, groups: GroupDef[], group: string, label: string): Promise<void>;
@@ -53,7 +56,7 @@ export class SwitchBar {
 		this.el.toggleClass('fsw-empty', empty);
 		if (empty && hidden === 0 && !this.host.showAdd()) return;
 		for (const g of config.groups) if (g.switches.length > 0) this.renderGroup(g, config.groups, selection);
-		if (config.presets.length > 0 || isPro()) this.renderPresets(config.presets, selection, empty);
+		if (config.presets.length > 0 || isPro()) this.renderPresets(config.presets, selection, empty, config.groups, isPro() ? readDefault(text) : []);
 		if (hidden > 0) this.el.createSpan({ cls: 'fsw-more', text: `${hidden} more with Pro` });
 		this.button('fsw-add', '+', 'add', empty ? 'Add a filter switch' : 'Add another filter switch', () => this.host.addSwitch(this.file)).setText(empty ? '+ Filter switch' : '+');
 		const again = focused ? this.el.querySelector<HTMLElement>(`[data-fsw-key="${CSS.escape(focused)}"]`) : null;
@@ -83,10 +86,11 @@ export class SwitchBar {
 		}
 	}
 
-	private renderPresets(presets: PresetDef[], selection: Selection, empty: boolean): void {
+	private renderPresets(presets: PresetDef[], selection: Selection, empty: boolean, groups: GroupDef[], defaultKeys: string[]): void {
 		if (empty) return;
 		const current = selectionKeys(selection).sort().join('\n');
-		const btn = this.button('fsw-presets', 'Presets', 'presets', 'Presets', () => {
+		const isDefault = defaultKeys.length > 0 && [...defaultKeys].sort().join('\n') === current;
+		const btn = this.button('fsw-presets', isDefault ? 'Presets •' : 'Presets', 'presets', isDefault ? 'Presets. The default switches are on' : 'Presets', () => {
 			const menu = new Menu();
 			for (const p of presets) {
 				const active = [...p.on].sort().join('\n') === current;
@@ -94,6 +98,9 @@ export class SwitchBar {
 			}
 			if (presets.length > 0) menu.addSeparator();
 			menu.addItem((i) => i.setTitle('Save switches as preset').setIcon('save').onClick(() => this.host.savePreset(this.file)));
+			menu.addItem((i) => i.setTitle('Apply the default switches').setIcon('undo-2').onClick(() => void this.host.applyDefault(this.file, groups)));
+			menu.addItem((i) => i.setTitle('Save switches as the default').setIcon('bookmark').onClick(() => void this.host.saveDefault(this.file)));
+			menu.addItem((i) => i.setTitle('Clear the saved default').setIcon('x').onClick(() => void this.host.clearDefault(this.file)));
 			for (const p of presets) menu.addItem((i) => i.setTitle(`Delete preset ${p.name}`).setIcon('trash').onClick(() => void this.host.deletePreset(this.file, p.name)));
 			// Under the button, so the menu also opens in the right place from the keyboard.
 			const r = btn.getBoundingClientRect();

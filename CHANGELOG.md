@@ -1,5 +1,11 @@
 # bases-filter-switches
 
+## 1.1.0
+
+### Minor Changes
+
+- ab25ccd: Default switches. Save the switch selection of a base as its default and re-apply it with one command or menu action (Pro).
+
 ## 1.0.2
 
 ### Patch Changes

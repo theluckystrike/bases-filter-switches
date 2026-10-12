@@ -1,6 +1,6 @@
 {
 	"name": "bases-filter-switches",
-	"version": "1.0.2",
+	"version": "1.1.0",
 	"private": true,
 	"description": "One-click switches above a base that turn saved filters on and off, in base tabs and embedded bases.",
 	"main": "main.js",

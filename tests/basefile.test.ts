@@ -3,15 +3,20 @@ import vectors from './vectors/bases-filter-switches.json';
 import {
 	addPropertyGroup,
 	applySelection,
+	clearDefault,
+	defaultSelection,
 	FREE_SWITCHES,
+	hasDefault,
 	limitConfig,
 	presetSelection,
 	propertyRef,
 	readConfig,
+	readDefault,
 	readSelection,
 	removePreset,
 	reset,
 	runOp,
+	saveDefault,
 	savePreset,
 	selectionKeys,
 	switchesFromValues,
@@ -177,5 +182,46 @@ describe('selection helpers', () => {
 		expect(() => runOp(BASE, 'nope', [])).toThrow(/unknown op/);
 		expect(() => runOp(BASE, 'toggle', ['Nope', 'x'])).toThrow(/no group/);
 		expect(() => runOp(BASE, 'preset', ['Nope'])).toThrow(/no preset/);
+	});
+});
+
+describe('default switches (Pro)', () => {
+	it('saveDefault replaces the old default and readDefault reads it back', () => {
+		expect(readDefault(BASE)).toEqual([]);
+		const t = saveDefault(BASE, ['Status/Todo']);
+		expect(readDefault(t)).toEqual(['Status/Todo']);
+		const t2 = saveDefault(t, ['Status/Done']);
+		expect(readDefault(t2)).toEqual(['Status/Done']);
+		expect(t2).toContain('# my switches');
+	});
+
+	it('clearDefault removes it and leaves a file without one unchanged', () => {
+		expect(clearDefault(BASE)).toBe(BASE);
+		const t = saveDefault(BASE, ['Status/Todo']);
+		expect(clearDefault(t)).toBe(BASE);
+	});
+
+	it('defaultSelection turns on the default keys of the known groups and ignores unknown ones', () => {
+		const groups = readConfig(BASE).groups;
+		expect(defaultSelection(groups, ['Status/Todo', 'Status/zzz', 'X/a'])).toEqual({ ...Object.fromEntries(groups.map((g) => [g.name, []])), Status: ['Todo'] });
+		expect(defaultSelection(groups, [])).toEqual(Object.fromEntries(groups.map((g) => [g.name, []])));
+	});
+	it('the default op does not turn switches off when the base has no saved default', () => {
+		const on = runOp(BASE, 'toggle', ['Status', 'Todo']);
+		expect(readSelection(on, readConfig(on).groups).Status).toEqual(['Todo']);
+		expect(hasDefault(on)).toBe(false);
+		expect(runOp(on, 'default', [])).toBe(on);
+	});
+
+	it('an empty saved default is a default: it turns every switch off', () => {
+		const on = runOp(saveDefault(BASE, []), 'toggle', ['Status', 'Todo']);
+		expect(hasDefault(on)).toBe(true);
+		expect(readSelection(runOp(on, 'default', []), readConfig(on).groups).Status).toEqual([]);
+	});
+
+	it('runOp applies the default with the default op', () => {
+		const t = saveDefault(BASE, ['Status/Todo']);
+		const out = runOp(t, 'default', []);
+		expect(readSelection(out, readConfig(t).groups).Status).toEqual(['Todo']);
 	});
 });

@@ -3,14 +3,19 @@ import {
 	addPropertyGroup,
 	addSwitch,
 	applySelection,
+	clearDefault,
+	defaultSelection,
 	FREE_GROUPS,
 	FREE_SWITCHES,
+	hasDefault,
 	presetSelection,
 	readConfig,
+	readDefault,
 	readSelection,
 	removePreset,
 	removeSwitch,
 	reset,
+	saveDefault,
 	savePreset,
 	selectionKeys,
 	switchesFromValues,
@@ -228,6 +233,30 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 		await this.write(file, (t) => removePreset(t, name));
 	}
 
+	async applyDefault(file: TFile, groups: GroupDef[]): Promise<void> {
+		if (!this.needPro('Default switches')) return;
+		const text = await this.read(file);
+		if (!hasDefault(text)) {
+			new Notice('This base has no saved default switches.');
+			return;
+		}
+		const resolved = this.resolve(readConfig(text)).groups;
+		await this.write(file, (t) => (hasDefault(t) ? applySelection(t, resolved, defaultSelection(resolved, readDefault(t))) : t));
+	}
+
+	async saveDefault(file: TFile): Promise<void> {
+		if (!this.needPro('Default switches')) return;
+		const groups = this.resolve(readConfig(await this.read(file))).groups;
+		await this.write(file, (t) => saveDefault(t, selectionKeys(readSelection(t, groups))));
+		new Notice('Default switches saved.');
+	}
+
+	async clearDefault(file: TFile): Promise<void> {
+		if (!this.needPro('Default switches')) return;
+		await this.write(file, (t) => clearDefault(t));
+		new Notice('Default switches cleared.');
+	}
+
 	addSwitch(file: TFile): void {
 		void this.openSwitchModal(file, null);
 	}
@@ -315,6 +344,11 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 			void this.read(f).then((t) => this.reset(f, this.resolve(readConfig(t)).groups, null));
 		});
 		onBase('save-preset', 'Save the current switches as a preset', (f) => this.savePreset(f));
+		onBase('apply-default', 'Apply the default switches of the current base', (f) => {
+			void this.read(f).then((t) => this.applyDefault(f, this.resolve(readConfig(t)).groups));
+		});
+		onBase('save-default', 'Save the current switches as the default of the current base', (f) => void this.saveDefault(f));
+		onBase('clear-default', 'Clear the saved default switches of the current base', (f) => void this.clearDefault(f));
 		onBase('add-property-group', 'Add switches from the values of a property', (f) => this.addPropertyGroup(f));
 	}
 

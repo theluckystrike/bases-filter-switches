@@ -2,7 +2,7 @@
  "slug": "bases-filter-switches",
  "module": "bases-filter-switches/src/basefile",
  "function": "runOp",
- "note": "args = [.base file text, op, op args]; expected = the new file text. ops: toggle [group, label], reset [group or null], add [group, label, filter], remove [group, label], preset [name], save-preset [name]. The state of a switch is read from the top-level filters: one filter of a group as an item of the top-level and list, or an or item that holds only filters of one group. Everything else in the file keeps its text, comments and quotes.",
+ "note": "args = [.base file text, op, op args]; expected = the new file text. ops: toggle [group, label], reset [group or null], add [group, label, filter], remove [group, label], preset [name], save-preset [name], save-default [], clear-default [], default [] (no change when the base has no saved default). The state of a switch is read from the top-level filters: one filter of a group as an item of the top-level and list, or an or item that holds only filters of one group. Everything else in the file keeps its text, comments and quotes.",
  "cases": [
   {
    "name": "turn one switch on: its filter goes to the end of the top-level and list, comments and quotes stay",
@@ -229,6 +229,60 @@
     ]
    ],
    "expected": "filters:\n  and:\n    - status == \"todo\"\nviews:\n  - type: table\n    name: V\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n"
+  },
+  {
+   "name": "save-default writes the on keys of the selection as the default list",
+   "args": [
+    "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\n    - status == \"todo\"\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n",
+    "save-default",
+    []
+   ],
+   "expected": "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\n    - status == \"todo\"\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n  default:\n    - Status/Todo\n"
+  },
+  {
+   "name": "clear-default removes the default list and keeps the rest of the file",
+   "args": [
+    "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n  default:\n    - Status/Todo\n",
+    "clear-default",
+    []
+   ],
+   "expected": "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n"
+  },
+  {
+   "name": "default applies the saved default keys: the Doing switch goes to the filters",
+   "args": [
+    "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n  default:\n    - Status/Doing\n",
+    "default",
+    []
+   ],
+   "expected": "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\n    - status == \"doing\"\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n  default:\n    - Status/Doing\n"
+  },
+  {
+   "name": "default with no saved default leaves the file unchanged",
+   "args": [
+    "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n",
+    "default",
+    []
+   ],
+   "expected": "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n"
+  },
+  {
+   "name": "default with no saved default keeps the switches that are on",
+   "args": [
+    "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\n    - status == \"todo\"\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n",
+    "default",
+    []
+   ],
+   "expected": "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\n    - status == \"todo\"\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n"
+  },
+  {
+   "name": "default ignores unknown keys in the saved default list",
+   "args": [
+    "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n  default:\n    - Status/Doing\n    - Nope/Gone\n",
+    "default",
+    []
+   ],
+   "expected": "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\n    - status == \"doing\"\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n  default:\n    - Status/Doing\n    - Nope/Gone\n"
   }
  ]
 }

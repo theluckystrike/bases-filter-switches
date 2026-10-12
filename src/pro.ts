@@ -15,7 +15,7 @@ export const SPONSORS: SponsorsConfig = {
 };
 
 export const PRO_UI = {
-	proSummary: 'Pro adds unlimited switches and groups, presets with a command for each, and switches built from the values of a property.',
+	proSummary: 'Pro adds unlimited switches and groups, presets with a command for each, default switches, and switches built from the values of a property.',
 	priceText: 'Sponsor $5 a month, or $15 once. When you have paid $15 in total, Pro stays on.',
 };
 

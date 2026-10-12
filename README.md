@@ -2,9 +2,9 @@
 
 Bases Filter Switches puts a row of one-click switches under the toolbar of a base. Each switch is a saved filter, such as "Todo" for `status == "todo"`. Click it and the base shows only those notes. Click it again and the filter is gone. You never open the filter editor, and you do not need one view for every mix of filters.
 
-The switches work in base files and in bases embedded in notes. They work with every layout, the table, cards, list and the layouts of other plugins, because a switch changes the filter of the base itself.
+The switches work in base files and in embedded bases. They work with every layout, because a switch changes the filter of the base itself.
 
-The free version gives each base one group of up to 3 switches. Pro removes the limit, adds presets with a command for each, and builds switches from the values of a property. Pro costs $5 a month, or $15 once, through GitHub Sponsors. A total payment of $15 meets the payment requirement for Pro without further payment. Sign-in and the checks below still apply.
+The free version gives each base one group of up to 3 switches. Pro removes the limit, adds presets with a command for each, adds default switches, and builds switches from the values of a property. Pro costs $5 a month, or $15 once, through GitHub Sponsors. A total payment of $15 meets the payment requirement for Pro. Sign-in and the checks below still apply.
 
 ## Features
 
@@ -46,11 +46,17 @@ Run "Add switches from the values of a property" and choose a property such as `
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/presets.png" alt="The preset Open work applied from its command: Todo, Doing and work are on and the base shows 4 notes" width="720">
 
-A preset saves which switches are on, in every group, under one name. Choose it from the Presets menu to set all groups at once. Each preset also gets a command, such as "Apply preset Open work to Tasks", so you can give it a hotkey.
+A preset saves which switches are on, in every group, under one name. Choose it from the Presets menu to set all groups at once. Each preset also gets a command, so you can give it a hotkey.
+
+### Default switches (Pro)
+
+<img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/default-switches.png" alt="A base of tasks after the command that applies the saved default: Todo is on again and the base shows 5 notes" width="720">
+
+Select "Save switches as the default" in the Presets menu to save the switches that are on now under the key `filterSwitches.default`. The command "Apply the default switches of the current base" or the menu item "Apply the default switches" turns them back on. "Clear the saved default" removes the default.
 
 ## Install
 
-When Bases Filter Switches is listed in the community directory, open Settings, then Community plugins, then Browse, and search for "Bases Filter Switches". Select Install, then Enable.
+When the plugin is in the community directory, open Settings, then Community plugins, then Browse, and search for "Bases Filter Switches". Select Install, then Enable.
 
 To install by hand, download `main.js`, `manifest.json` and `styles.css` from the latest release. Put the three files in `<vault>/.obsidian/plugins/bases-filter-switches/`. Reload the list of community plugins, then turn on Bases Filter Switches.
 
@@ -61,7 +67,7 @@ Bases Filter Switches needs Obsidian 1.13.4 or newer and the Bases core plugin. 
 1. Open a base. Under the toolbar you see a small "+ Filter switch" button.
 2. Select it and add a switch, for example group "Status", label "Todo", filter `status == "todo"`.
 3. Add more switches to the group. Click them to filter the base.
-4. Select "All" to show every note again, or run "Turn every filter switch off in the current base".
+4. Select "All" to show every note again.
 
 The switches are saved in the base file under the key `filterSwitches`. Core Bases ignores this key and keeps it when it saves the file. You can edit it by hand:
 
@@ -80,7 +86,7 @@ filterSwitches:
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/pro-settings.png" alt="The Pro section of the settings after sign in, with the GitHub account and the Pro status" width="720">
 
-The free version is useful on its own: one group of up to 3 switches in every base. Pro adds unlimited switches and groups, presets with a command for each, and switches built from the values of a property. If a base has more switches than the free version shows, the row says how many more there are. Those switches stay in the file and come back when Pro is on.
+The free version is useful on its own: one group of up to 3 switches in every base. Pro adds unlimited switches and groups, presets with a command for each, default switches, and switches built from the values of a property. If a base has more switches than the free version shows, the row says how many more there are. Those switches stay in the file and come back when Pro is on.
 
 1. Sponsor [theluckystrike on GitHub Sponsors](https://github.com/sponsors/theluckystrike) with $5 a month, or $15 once. A total payment of $15 meets the payment requirement for Pro without further payment. Sign-in and the checks below still apply.
 2. In Obsidian, open the settings of Bases Filter Switches and select "Sign in with GitHub".
@@ -102,23 +108,23 @@ The Pro section shows your GitHub account, the Pro status, and the Sign in, Refr
 
 ### Where is the state of the switches saved?
 
-In the filters of the base file. A switch is on when its filter is in the top-level filters. If you type a filter by hand that is the same as a switch, that switch shows as on.
+In the filters of the base file. A switch is on when its filter is in the top-level filters. A hand-typed filter that matches a switch shows that switch as on.
 
 ### Does it change the rest of my base file?
 
-It edits only the top-level `filters` and its own `filterSwitches` key, and it keeps your comments, key order and quotes. Core Bases rewrites the whole file when you change a view in the app, and then the comments of the file are lost. That is how core saves, not this plugin.
+It edits only the top-level `filters` and its own `filterSwitches` key, and it keeps your comments, key order and quotes. Core Bases rewrites the whole file when you change a view, and then the comments are lost. That is how core saves, not this plugin.
 
 ### Can a switch change one view only?
 
-No. Switches change the top-level filters, so they apply to every view of the base. View filters stay as they are.
+No. Switches change the top-level filters, so they apply to every view.
 
 ### Do base code blocks get switches?
 
-No. A base code block lives inside a note, and the plugin only edits base files. Embed a base file with `![[name.base]]` instead.
+No. The plugin only edits base files. Embed a base file with `![[name.base]]`.
 
 ### Is there another plugin for this?
 
-Bases Toolbox has a command that turns single top-level filter conditions off and on from a window. Bases Filter Switches puts the switches on the base itself, supports groups with "or" between switches, and works in embedded bases.
+Bases Toolbox turns single top-level filter conditions off and on from a window. This plugin puts the switches on the base itself and works in embedded bases.
 
 ## Payment, account and network
 
