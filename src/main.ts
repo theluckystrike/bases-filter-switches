@@ -4,6 +4,7 @@ import {
 	addSwitch,
 	applySelection,
 	clearDefault,
+	clearPaused,
 	defaultSelection,
 	editSwitch,
 	FREE_GROUPS,
@@ -21,6 +22,7 @@ import {
 	selectionKeys,
 	switchesFromValues,
 	toggle,
+	toggleGroupPaused,
 	topFilters,
 	type GroupDef,
 	type PresetDef,
@@ -208,17 +210,21 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 	async toggle(file: TFile, groups: GroupDef[], group: string, label: string): Promise<void> {
 		const g = groups.find((x) => x.name === group);
 		if (!g) return;
-		await this.write(file, (t) => applySelection(t, groups, toggle(readSelection(t, groups), g, label)));
+		await this.write(file, (t) => applySelection(clearPaused(t, group), groups, toggle(readSelection(t, groups), g, label)));
+	}
+
+	async pauseGroup(file: TFile, groups: GroupDef[], group: string): Promise<void> {
+		await this.write(file, (t) => toggleGroupPaused(t, groups, group));
 	}
 
 	async reset(file: TFile, groups: GroupDef[], group: string | null): Promise<void> {
-		await this.write(file, (t) => applySelection(t, groups, reset(readSelection(t, groups), group)));
+		await this.write(file, (t) => applySelection(clearPaused(t, group), groups, reset(readSelection(t, groups), group)));
 	}
 
 	async applyPreset(file: TFile, preset: PresetDef): Promise<void> {
 		if (!this.needPro('Presets')) return;
 		const groups = this.resolve(readConfig(await this.read(file))).groups;
-		await this.write(file, (t) => applySelection(t, groups, presetSelection(groups, preset)));
+		await this.write(file, (t) => applySelection(clearPaused(t), groups, presetSelection(groups, preset)));
 	}
 
 	async applyPresetByName(file: TFile, name: string): Promise<void> {
@@ -248,7 +254,7 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 			return;
 		}
 		const resolved = this.resolve(readConfig(text)).groups;
-		await this.write(file, (t) => (hasDefault(t) ? applySelection(t, resolved, defaultSelection(resolved, readDefault(t))) : t));
+		await this.write(file, (t) => (hasDefault(t) ? applySelection(clearPaused(t), resolved, defaultSelection(resolved, readDefault(t))) : t));
 	}
 
 	async saveDefault(file: TFile): Promise<void> {

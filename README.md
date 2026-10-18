@@ -14,9 +14,17 @@ The free version gives each base one group of up to 3 switches. Pro removes the 
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/base-file.png" alt="A base of tasks with the Todo and Doing switches on, showing 7 of 10 notes" width="720">
 
-Switches come in groups, for example a Status group with Todo, Doing and Done. Switches of one group are joined with "or": Todo and Doing together show the notes that are todo or doing. Different groups are joined with "and". The "All" switch of a group turns off the switches of that group.
+Switches come in groups, for example a Status group with Todo, Doing and Done. The plugin joins switches of one group with "or": Todo and Doing together show the notes that are todo or doing. It joins different groups with "and". The "All" switch of a group turns off the switches of that group.
 
 Each switch is a real filter. When a switch is on, its filter is in the top-level filters of the base, next to the filters you wrote yourself. When you open the filter editor, you see it there. The plugin does not change the text of your own filters. A top-level filter that is not an "and" list becomes the first item of a new "and" list.
+
+### Pause and resume a group
+
+Select "Pause" beside the group name to remove that group's active filters. Select "Resume" to put the saved selection back. The base file keeps the paused labels, so you can close and reopen it before you resume. This control is free. The free group and switch limits still apply.
+
+"All" clears the selection and its saved pause. A click on a switch starts a new selection. Presets and default switches also replace a saved pause. Other filter groups and view filters stay as they are.
+
+<img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/pause-group.png" alt="The Status group is paused and offers a Resume button" width="720">
 
 ### Embedded bases
 
@@ -34,13 +42,13 @@ Select the + button, or run "Add a filter switch to the current base". Type a gr
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/light-theme.png" alt="The switch row in the light theme with the Doing switch on" width="720">
 
-The switches take their colors from your theme, in light and dark mode. A switch that is on has the accent color. Each switch is a button: press Tab to reach the row, the arrow keys, Home and End to move, and Enter or Space to turn a switch on or off.
+The switches take their colors from your theme, in light and dark mode. A switch that is on has the accent color. Press Tab to reach the row. Use the arrow keys, Home and End to move between buttons. Press Enter or Space to toggle a switch.
 
 ### Switches from the values of a property (Pro)
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/property-values.png" alt="An Area group with one switch for each value of the area property: home, learning and work" width="720">
 
-Run "Add switches from the values of a property" and choose a property such as `area`. The group gets one switch for each value that notes have now, and new values show up by themselves. For a list property, the switches use `contains()`. You can make the group "one at a time", so a click on one switch turns the others off.
+Run "Add switches from the values of a property" and choose a property such as `area`. The group gets one switch for each value that notes have now, and new values show up by themselves. For a property with list values, the switches use `list(property).contains(value)`. This also matches scalar values exactly. Values with the same label share one switch. You can make the group "one at a time", so a click on one switch turns the others off.
 
 ### Presets (Pro)
 
@@ -60,7 +68,7 @@ When the plugin is in the community directory, open Settings, then Community plu
 
 To install by hand, download `main.js`, `manifest.json` and `styles.css` from the latest release. Put the three files in `<vault>/.obsidian/plugins/bases-filter-switches/`. Reload the list of community plugins, then turn on Bases Filter Switches.
 
-Bases Filter Switches needs Obsidian 1.13.4 or newer and the Bases core plugin. It was tested on desktop with Obsidian 1.13.4 and 1.14.4.
+Bases Filter Switches needs Obsidian 1.13.4 or newer and the Bases core plugin. The app checks for this update use desktop Obsidian 1.14.4.
 
 ## Usage
 
@@ -69,7 +77,7 @@ Bases Filter Switches needs Obsidian 1.13.4 or newer and the Bases core plugin. 
 3. Add more switches to the group. Click them to filter the base.
 4. Select "All" to turn off the switches of the group.
 
-The switches are saved in the base file under the key `filterSwitches`. Core Bases ignores this key and keeps it when it saves the file. You can edit it by hand:
+The base file keeps the switches under the key `filterSwitches`. Core Bases ignores this key and keeps it when it saves the file. You can edit it by hand:
 
 ```yaml
 filterSwitches:
@@ -86,13 +94,7 @@ filterSwitches:
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/pro-settings.png" alt="The Pro section of the settings after sign in, with the GitHub account and the Pro status" width="720">
 
-The free version is useful on its own: one group of up to 3 switches in each base. Pro adds unlimited switches and groups, presets with a command for each, default switches, and switches built from the values of a property. If a base has more switches than the free version shows, the row shows the count. Those switches stay in the file.
-
-1. Sponsor [theluckystrike on GitHub Sponsors](https://github.com/sponsors/theluckystrike) with $5 a month, or $15 once. A total payment of $15 meets the payment requirement for Pro without further payment. Sign-in and the checks below still apply.
-2. In Obsidian, open the settings of Bases Filter Switches and select "Sign in with GitHub".
-3. The plugin copies a code and opens github.com/login/device. Paste the code there and approve.
-
-If you sponsor after you sign in, select Refresh. A negative sponsorship answer turns Pro off. See [Payment, account and network](#payment-account-and-network) for the check and offline limits.
+Sponsor on [GitHub Sponsors](https://github.com/sponsors/theluckystrike). Open the plugin settings and select "Sign in with GitHub". Use Refresh after you start a sponsorship. Read the account and offline limits below.
 
 ## Settings
 
@@ -112,7 +114,7 @@ In the filters of the base file. A switch is on when its filter is in the top-le
 
 ### Does it change the rest of my base file?
 
-It edits only the top-level `filters` and its own `filterSwitches` key, and it keeps your comments, key order and quotes. Core Bases rewrites the whole file when you change a view, and then the comments are lost.
+It edits only the top-level `filters` and its own `filterSwitches` key, and it keeps your comments, key order and quotes. Core Bases rewrites the whole file when you change a view, and removes its comments.
 
 ### Can a switch change one view only?
 
@@ -140,7 +142,7 @@ After a successful check, Pro can work offline for up to 14 days. Sign out or a 
 
 ## Support
 
-Report a bug or ask for a feature in the issue tracker of this repository. Please include your Obsidian version and the `filters` and `filterSwitches` parts of the base file.
+Report a bug or ask for a feature in the issue tracker of this repository. Include your Obsidian version and the `filters` and `filterSwitches` parts of the base file.
 
 To build from source:
 

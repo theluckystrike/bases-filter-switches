@@ -92,7 +92,7 @@ describe('Bases Filter Switches', function () {
 	it('filters an open base tab: Todo, Todo and Doing, then All', async function () {
 		await obsidianPage.openFile(`${DIR}/Tasks.base`);
 		const first = await waitRows(false, 10, 'All*');
-		expect(first.chips).toEqual(['All*', 'Todo', 'Doing', 'Done', '+']);
+		expect(first.chips).toEqual(['Pause', 'All*', 'Todo', 'Doing', 'Done', '+']);
 		await click(false, 'Todo');
 		await waitRows(false, 5, 'Todo*');
 		await click(false, 'Doing');
@@ -113,7 +113,7 @@ describe('Bases Filter Switches', function () {
 	it('works from the keyboard: arrow keys move, Enter toggles', async function () {
 		await obsidianPage.openFile(`${DIR}/Tasks.base`);
 		await waitRows(false, 10, 'All*');
-		await browser.execute(() => document.querySelector<HTMLElement>('.workspace-leaf.mod-active .fsw-bar .fsw-chip')?.focus());
+		await browser.execute(() => document.querySelector<HTMLElement>('.workspace-leaf.mod-active .fsw-bar .fsw-chip:not(:disabled)')?.focus());
 		await browser.keys(['ArrowRight', 'ArrowRight', 'ArrowRight']);
 		const focused = await browser.execute(() => document.activeElement?.textContent ?? '');
 		expect(focused).toBe('Done');
@@ -124,15 +124,32 @@ describe('Bases Filter Switches', function () {
 	it('free: 3 switches of the first group, the rest counted as Pro', async function () {
 		await obsidianPage.openFile(`${DIR}/Many.base`);
 		const s = await waitRows(false, 10, 'All*');
-		expect(s.chips).toEqual(['All*', 'Todo', 'Doing', 'Done', '+']);
+		expect(s.chips).toEqual(['Pause', 'All*', 'Todo', 'Doing', 'Done', '+']);
 		expect(s.more).toBe('3 more with Pro');
+	});
+
+	it('free: pauses a selection, reopens the base and resumes the same filters', async function () {
+		await obsidianPage.openFile(`${DIR}/Tasks.base`);
+		await waitRows(false, 10, 'All*');
+		await click(false, 'Todo');
+		await waitRows(false, 5, 'Todo*');
+		await click(false, 'Pause');
+		await waitRows(false, 10, 'Resume*');
+		expect(await baseText('Tasks.base')).toContain('paused:');
+		await obsidianPage.openFile(`${DIR}/Weekly review.md`);
+		await waitRows(true, 10, 'Resume*');
+		await obsidianPage.openFile(`${DIR}/Tasks.base`);
+		await waitRows(false, 10, 'Resume*');
+		await click(false, 'Resume');
+		await waitRows(false, 5, 'Todo*');
+		expect(await baseText('Tasks.base')).not.toContain('paused:');
 	});
 
 	it('Pro: property values become switches and a preset command sets every group', async function () {
 		expect(await signInPro()).toBe(true);
 		await obsidianPage.openFile(`${DIR}/Many.base`);
 		const s = await waitRows(false, 10, 'work');
-		expect(s.chips).toEqual(['All*', 'Todo', 'Doing', 'Done', 'Waiting', 'High', 'All*', 'home', 'learning', 'work', 'Presets', '+']);
+		expect(s.chips).toEqual(['Pause', 'All*', 'Todo', 'Doing', 'Done', 'Waiting', 'Pause', 'High', 'Pause', 'All*', 'home', 'learning', 'work', 'Presets', '+']);
 		const ran = await browser.executeObsidian(({ app }) => {
 			const cmds = (app as unknown as { commands: { commands: Record<string, { name: string }>; executeCommandById(id: string): boolean } }).commands;
 			const id = Object.keys(cmds.commands).find((k) => cmds.commands[k]?.name.includes('Apply preset Open work to Many'));

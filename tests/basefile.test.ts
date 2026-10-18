@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import vectors from './vectors/bases-filter-switches.json';
 import {
+	clearPaused,
+	readPaused,
+	toggleGroupPaused,
 	addPropertyGroup,
 	applySelection,
 	clearDefault,
@@ -133,13 +136,13 @@ describe('property values (Pro)', () => {
 			{ label: 'todo', filter: 'status == "todo"' },
 		]);
 	});
-	it('builds contains() switches when any value is a list, and quotes odd names', () => {
+	it('wraps mixed values with list() and keeps earlier expressions for an active switch', () => {
 		expect(switchesFromValues('my tags', [['a', 'b'], 'c', 2, true])).toEqual([
-			{ label: '2', filter: 'note["my tags"].contains(2)' },
-			{ label: 'a', filter: 'note["my tags"].contains("a")' },
-			{ label: 'b', filter: 'note["my tags"].contains("b")' },
-			{ label: 'c', filter: 'note["my tags"].contains("c")' },
-			{ label: 'true', filter: 'note["my tags"].contains(true)' },
+			{ label: '2', filter: 'list(note["my tags"]).contains(2)', legacyFilters: ['note["my tags"].contains(2)'] },
+			{ label: 'a', filter: 'list(note["my tags"]).contains("a")', legacyFilters: ['note["my tags"].contains("a")'] },
+			{ label: 'b', filter: 'list(note["my tags"]).contains("b")', legacyFilters: ['note["my tags"].contains("b")'] },
+			{ label: 'c', filter: 'list(note["my tags"]).contains("c")', legacyFilters: ['note["my tags"].contains("c")'] },
+			{ label: 'true', filter: 'list(note["my tags"]).contains(true)', legacyFilters: ['note["my tags"].contains(true)'] },
 		]);
 	});
 	it('propertyRef keeps plain identifiers bare', () => {
@@ -259,5 +262,64 @@ describe('editSwitch', () => {
 		const off = runOp(T, 'toggle', ['Status', 'Todo']);
 		const out = editSwitch(off, { group: 'Status', label: 'Todo' }, { group: 'Status', label: 'Todo', filter: 'status == "open"' });
 		expect(topFilters(out)).toEqual(['file.inFolder("Tasks")']);
+	});
+});
+
+describe('mixed property regression', () => {
+	it('uses list() so a scalar string must match the whole value', () => {
+		const switches = switchesFromValues('mixed', [['alpha'], 'alpha', 'alphabet', 42, true]);
+		expect(switches.find((s) => s.label === 'alpha')?.filter).toBe('list(mixed).contains("alpha")');
+	});
+	it('does not give a number and text with the same spelling duplicate switch keys', () => {
+		const switches = switchesFromValues('mixed', [42, '42', true, 'true', Number.NaN, Infinity]);
+		expect(new Set(switches.map((s) => s.label)).size).toBe(switches.length);
+		expect(switches.some((s) => s.filter.includes('NaN') || s.filter.includes('Infinity'))).toBe(false);
+	});
+});
+
+
+describe('generated filter migration', () => {
+	it('reads an earlier contains filter as on, then removes it when the switch turns off', () => {
+		const groups: GroupDef[] = [{ name: 'Mixed', property: 'mixed', switches: switchesFromValues('mixed', [['alpha'], 'alpha']) }];
+		const text = 'filters:\n  and:\n    - file.inFolder("Notes")\n    - mixed.contains("alpha")\n';
+		expect(readSelection(text, groups).Mixed).toEqual(['alpha']);
+		const out = applySelection(text, groups, { Mixed: [] });
+		expect(out).not.toContain('mixed.contains');
+		expect(out).toContain('file.inFolder');
+	});
+	it('replaces an earlier filter with the corrected expression when a second switch is added', () => {
+		const groups: GroupDef[] = [{ name: 'Mixed', property: 'mixed', switches: switchesFromValues('mixed', [['alpha'], 'beta']) }];
+		const text = 'filters: mixed.contains("alpha")\n';
+		const out = applySelection(text, groups, { Mixed: ['alpha', 'beta'] });
+		expect(out).toContain('list(mixed).contains("alpha")');
+		expect(readSelection(out, groups).Mixed).toEqual(['alpha', 'beta']);
+	});
+});
+
+
+describe('pause a filter group', () => {
+	const groups: GroupDef[] = [{ name: 'S', switches: [{ label: 'A', filter: 'a == 1' }, { label: 'B', filter: 'a == 2' }] }];
+	const text = '# Keep this comment\nfilters:\n  and:\n    - file.inFolder("Notes")\n    - or: [a == 1, a == 2]\nviews: [{type: table, name: Notes, filters: keep}]\n';
+	it('removes only the group clauses, saves the labels and restores them after a file read', () => {
+		const paused = toggleGroupPaused(text, groups, 'S');
+		expect(readPaused(paused, 'S')).toEqual(['A', 'B']);
+		expect(readSelection(paused, groups).S).toEqual([]);
+		expect(paused).toContain('file.inFolder("Notes")');
+		expect(paused).toContain('# Keep this comment');
+		expect(paused).toContain('filters: keep');
+		const resumed = toggleGroupPaused(paused, groups, 'S');
+		expect(readSelection(resumed, groups).S).toEqual(['A', 'B']);
+		expect(readPaused(resumed, 'S')).toBeNull();
+	});
+	it('does not pause an empty group and discards labels that no longer exist on resume', () => {
+		expect(toggleGroupPaused('views: []\n', groups, 'S')).toBe('views: []\n');
+		const paused = toggleGroupPaused(text, groups, 'S');
+		const changed = [{ ...groups[0]!, switches: [groups[0]!.switches[1]!] }];
+		expect(readSelection(toggleGroupPaused(paused, changed, 'S'), changed).S).toEqual(['B']);
+	});
+	it('an explicit reset can clear the saved pause and leave unrelated groups intact', () => {
+		const paused = toggleGroupPaused(text, groups, 'S');
+		expect(readPaused(clearPaused(paused, 'S'), 'S')).toBeNull();
+		expect(clearPaused(paused, 'Other')).toBe(paused);
 	});
 });

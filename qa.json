@@ -91,5 +91,12 @@
 				"hold": 1600
 			}
 		]
+	},
+	{
+		"feature": "pause-group",
+		"caption": "The free Pause control keeps Todo selected for a later Resume.",
+		"note": "Tasks.base",
+		"eval": "(async () => { const p = app.plugins.plugins['bases-filter-switches']; p.pro.signOut(); await new Promise(r => setTimeout(r, 800)); const bar = [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar')].find(b => b.offsetParent); [...bar.querySelectorAll('button')].find(b => b.textContent === 'Todo').click(); await new Promise(r => setTimeout(r, 700)); bar.querySelector('.fsw-pause').click(); await new Promise(r => setTimeout(r, 700)); const resume = bar.querySelector('.fsw-pause'); if (resume.textContent !== 'Resume') throw new Error('Pause did not save the selection'); return 'free pause PASS'; })()",
+		"wait": 700
 	}
 ]

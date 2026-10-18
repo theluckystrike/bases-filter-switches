@@ -30,6 +30,8 @@ export const FREE_GROUPS = 1;
 export interface SwitchDef {
 	label: string;
 	filter: string;
+	/** Earlier generated expressions. Read them as on, then replace or remove them on the next click. */
+	legacyFilters?: string[];
 }
 export interface GroupDef {
 	name: string;
@@ -124,10 +126,23 @@ export function switchesFromValues(property: string, values: unknown[]): SwitchD
 	const ref = propertyRef(property);
 	const isList = values.some((v) => Array.isArray(v));
 	const flat: unknown[] = values.flatMap((v): unknown[] => (Array.isArray(v) ? (v as unknown[]) : [v]));
-	const keep = flat.filter((v): v is string | number | boolean => (typeof v === 'string' && v.trim() !== '') || typeof v === 'number' || typeof v === 'boolean');
+	const keep = flat.filter((v): v is string | number | boolean => (typeof v === 'string' && v.trim() !== '') || (typeof v === 'number' && Number.isFinite(v)) || typeof v === 'boolean');
 	const distinct = uniqueBy(keep, (v) => `${typeof v}:${String(v)}`);
 	distinct.sort((a, b) => String(a).localeCompare(String(b), 'en', { numeric: true }));
-	return distinct.map((v) => ({ label: String(v), filter: isList ? `${ref}.contains(${literal(v)})` : `${ref} == ${literal(v)}` }));
+	// One visible label has one switch key, including 42 and "42" in a mixed property.
+	const byLabel = new Map<string, (string | number | boolean)[]>();
+	for (const v of distinct) {
+		const label = String(v);
+		const group = byLabel.get(label) ?? [];
+		group.push(v);
+		byLabel.set(label, group);
+	}
+	return [...byLabel].map(([label, values]) => {
+		const filters = values.map((v) => isList ? `list(${ref}).contains(${literal(v)})` : `${ref} == ${literal(v)}`);
+		const filter = filters.length === 1 ? filters[0]! : `(${filters.join(' || ')})`;
+		const legacyFilters = values.map((v) => isList ? `${ref}.contains(${literal(v)})` : `${ref} == ${literal(v)}`).filter((old) => old !== filter);
+		return legacyFilters.length > 0 ? { label, filter, legacyFilters } : { label, filter };
+	});
 }
 
 interface Owner {
@@ -137,7 +152,9 @@ interface Owner {
 
 function owners(groups: GroupDef[]): Map<string, Owner> {
 	const m = new Map<string, Owner>();
-	for (const g of groups) for (const s of g.switches) if (!m.has(s.filter)) m.set(s.filter, { group: g.name, label: s.label });
+	for (const g of groups) for (const s of g.switches) {
+		for (const filter of [s.filter, ...(s.legacyFilters ?? [])]) if (!m.has(filter)) m.set(filter, { group: g.name, label: s.label });
+	}
 	return m;
 }
 
@@ -412,6 +429,52 @@ export function clearDefault(text: string): string {
 	const own = doc.get(KEY, true);
 	if (!isMap(own) || !own.has('default')) return text;
 	own.delete('default');
+	return render(doc);
+}
+
+/** Saved labels of a paused group. Null means the group is not paused. */
+export function readPaused(text: string, group: string): string[] | null {
+	const own = rec(rec(parseDocument(text).toJS())?.[KEY]);
+	const paused = rec(own?.paused);
+	const value = paused && Object.prototype.hasOwnProperty.call(paused, group) ? paused[group] : null;
+	return Array.isArray(value) ? value.map(str).filter((v): v is string => v !== null) : null;
+}
+
+/** A new selection or an explicit reset discards the paused selection it replaces. */
+export function clearPaused(text: string, group: string | null = null): string {
+	const doc = parseDocument(text);
+	const own = doc.get(KEY, true);
+	const paused = isMap(own) ? own.get('paused', true) : null;
+	if (!isMap(own) || !isMap(paused)) return text;
+	if (group === null) own.delete('paused');
+	else {
+		if (!paused.has(group)) return text;
+		paused.delete(group);
+		if (paused.items.length === 0) own.delete('paused');
+	}
+	return render(doc);
+}
+
+/** Pause the group's filters without losing their labels. A second click restores them. */
+export function toggleGroupPaused(text: string, groups: GroupDef[], name: string): string {
+	const group = groups.find((g) => g.name === name);
+	if (!group) return text;
+	const selection = readSelection(text, groups);
+	const on = selection[name] ?? [];
+	const saved = readPaused(text, name);
+	if (saved !== null && on.length === 0) {
+		const known = group.switches.filter((s) => saved.includes(s.label)).map((s) => s.label);
+		return applySelection(clearPaused(text, name), groups, { ...selection, [name]: group.single ? known.slice(0, 1) : known });
+	}
+	if (on.length === 0) return text;
+	const doc = parseDocument(applySelection(text, groups, { ...selection, [name]: [] }));
+	const own = ownMap(doc);
+	let paused: unknown = own.get('paused', true);
+	if (!isMap(paused)) {
+		paused = doc.createNode({});
+		own.set('paused', paused);
+	}
+	(paused as YAMLMap).set(name, doc.createNode(on));
 	return render(doc);
 }
 

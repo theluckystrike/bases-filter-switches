@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SwitchBar, type BarHost } from '../src/bar';
-import { applySelection, readConfig, readSelection, reset, toggle, type GroupDef } from '../src/basefile';
+import { applySelection, readConfig, readSelection, reset, toggle, toggleGroupPaused, type GroupDef } from '../src/basefile';
 
 // Free tier: 4 switches in one group, the 4th is hidden and is on in the file (Pro ran out).
 const BASE = `filters:\n  and:\n    - a == 4\nfilterSwitches:\n  groups:\n    - name: S\n      switches:\n${[1, 2, 3, 4].map((n) => `        - label: a${n}\n          filter: a == ${n}\n`).join('')}`;
@@ -18,6 +18,10 @@ function host(state: { text: string }): BarHost {
 		},
 		reset: (_f, groups: GroupDef[], group) => {
 			state.text = applySelection(state.text, groups, reset(readSelection(state.text, groups), group));
+			return noop();
+		},
+		pauseGroup: (_f, groups, group) => {
+			state.text = toggleGroupPaused(state.text, groups, group);
 			return noop();
 		},
 		applyPreset: noop,
@@ -52,5 +56,16 @@ describe('switch bar, free tier with a hidden switch that is on', () => {
 		await clickChip(state, 'all:S');
 		expect(readSelection(state.text, readConfig(state.text).groups).S).toEqual([]);
 		expect(state.text).not.toContain('a == 4\nfilterSwitches');
+	});
+});
+
+
+describe('pause and resume a group without Pro', () => {
+	it('keeps the hidden active switch when it pauses and resumes the group', async () => {
+		const state = { text: BASE };
+		await clickChip(state, 'pause:S');
+		expect(readSelection(state.text, readConfig(state.text).groups).S).toEqual([]);
+		await clickChip(state, 'pause:S');
+		expect(readSelection(state.text, readConfig(state.text).groups).S).toEqual(['a4']);
 	});
 });

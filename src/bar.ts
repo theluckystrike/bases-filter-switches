@@ -1,6 +1,6 @@
 // The switch bar: one row of chips under the Bases toolbar, for a .base tab or a ![[x.base]] embed.
 import { Menu, type TFile } from 'obsidian';
-import { limitConfig, readConfig, readDefault, readSelection, selectionKeys, switchKey, type GroupDef, type PresetDef, type Selection, type SwitchConfig } from './basefile';
+import { limitConfig, readConfig, readDefault, readPaused, readSelection, selectionKeys, switchKey, type GroupDef, type PresetDef, type Selection, type SwitchConfig } from './basefile';
 import { isPro } from './pro';
 
 export const BAR_CLASS = 'fsw-bar';
@@ -12,6 +12,7 @@ export interface BarHost {
 	showAdd(): boolean;
 	toggle(file: TFile, groups: GroupDef[], group: string, label: string): Promise<void>;
 	reset(file: TFile, groups: GroupDef[], group: string | null): Promise<void>;
+	pauseGroup(file: TFile, groups: GroupDef[], group: string): Promise<void>;
 	applyPreset(file: TFile, preset: PresetDef): Promise<void>;
 	savePreset(file: TFile): void;
 	deletePreset(file: TFile, name: string): Promise<void>;
@@ -58,7 +59,7 @@ export class SwitchBar {
 		const empty = config.groups.every((g) => g.switches.length === 0);
 		this.el.toggleClass('fsw-empty', empty);
 		if (empty && hidden === 0 && !this.host.showAdd()) return;
-		for (const g of config.groups) if (g.switches.length > 0) this.renderGroup(g, all, selection);
+		for (const g of config.groups) if (g.switches.length > 0) this.renderGroup(g, all, selection, readPaused(text, g.name) !== null);
 		if (config.presets.length > 0 || isPro()) this.renderPresets(config.presets, selection, empty, all, isPro() ? readDefault(text) : []);
 		if (hidden > 0) this.el.createSpan({ cls: 'fsw-more', text: `${hidden} more with Pro` });
 		this.button('fsw-add', '+', 'add', empty ? 'Add a filter switch' : 'Add another filter switch', () => this.host.addSwitch(this.file)).setText(empty ? '+ Filter switch' : '+');
@@ -66,10 +67,15 @@ export class SwitchBar {
 		again?.focus();
 	}
 
-	private renderGroup(g: GroupDef, groups: GroupDef[], selection: Selection): void {
+	private renderGroup(g: GroupDef, groups: GroupDef[], selection: Selection, savedPause: boolean): void {
 		const on = selection[g.name] ?? [];
+		const paused = savedPause && on.length === 0;
 		const box = this.el.createDiv({ cls: 'fsw-group', attr: { role: 'group', 'aria-label': g.name } });
 		box.createSpan({ cls: 'fsw-group-name', text: g.name });
+		const pause = this.chip(box, paused ? 'Resume' : 'Pause', paused, `pause:${g.name}`, () => void this.host.pauseGroup(this.file, groups, g.name));
+		pause.addClass('fsw-pause');
+		pause.setAttribute('aria-label', `${paused ? 'Resume' : 'Pause'} ${g.name} filters`);
+		pause.disabled = !paused && on.length === 0;
 		if (g.switches.length > 1) {
 			const all = this.chip(box, 'All', on.length === 0, `all:${g.name}`, () => void this.host.reset(this.file, groups, g.name));
 			all.addClass('fsw-all');
@@ -128,7 +134,7 @@ export class SwitchBar {
 	private onKey(e: KeyboardEvent): void {
 		const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
 		if (!keys.includes(e.key)) return;
-		const buttons = Array.from(this.el.querySelectorAll<HTMLButtonElement>('button'));
+		const buttons = Array.from(this.el.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
 		const i = buttons.indexOf(activeDocument.activeElement as HTMLButtonElement);
 		if (i < 0 || buttons.length === 0) return;
 		const last = buttons.length - 1;

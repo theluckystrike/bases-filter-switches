@@ -1,5 +1,11 @@
 # bases-filter-switches
 
+## 1.2.0
+
+### Minor Changes
+
+- 9f1db22: Add free Pause and Resume controls for a filter group. Correct mixed list and scalar filters. Keep earlier generated filters removable and use one switch key for each label.
+
 ## 1.1.2
 
 ### Patch Changes
