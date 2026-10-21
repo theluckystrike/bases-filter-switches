@@ -4,13 +4,13 @@ Bases Filter Switches puts a row of one-click switches under the toolbar of a ba
 
 The switches work in base files and embeds. Each switch changes the base file filters, not one view.
 
-The free version gives each base one group of up to 3 switches. Pro removes that limit, adds presets with commands, default switches, and switches from property values. A total payment of $15 meets the payment requirement for Pro. Sign-in and the checks below still apply.
+The free version gives each base one group of up to 3 switches. Pro removes that limit, adds presets with commands, default switches, and switches from property values.
 
 ## Features
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/bases-filter-switches.gif" alt="Clicking Todo, then Doing, then All, then Done above a base of tasks; the rows change after each click" width="720">
 
-Free gives each base one group of up to 3 switches. Pro removes that limit and adds presets, default switches, and property value switches. Pro costs $15 one time or $5 a month. Choose [GitHub Sponsors](https://github.com/sponsors/theluckystrike?metadata_source=bases-filter-switches) or the [$15 one-time offer](https://github.com/sponsors/theluckystrike/sponsorships?tier_id=666162&metadata_source=bases-filter-switches).
+Pro costs $15 one time or $5 a month. Choose [GitHub Sponsors](https://github.com/sponsors/theluckystrike?metadata_source=bases-filter-switches) or the [$15 one-time offer](https://github.com/sponsors/theluckystrike/sponsorships?tier_id=666162&metadata_source=bases-filter-switches).
 
 ### Switches above a base
 
@@ -66,7 +66,7 @@ Select "Save switches as the default" in the Presets menu to save the switches t
 
 ## Install
 
-When the plugin is in the community directory, open Settings, then Community plugins, then Browse, and search for "Bases Filter Switches". Select Install, then Enable.
+Open Settings, then Community plugins, then Browse, and search for "Bases Filter Switches". Select Install, then Enable.
 
 To install by hand, download `main.js`, `manifest.json` and `styles.css` from the latest release. Put the three files in `<vault>/.obsidian/plugins/bases-filter-switches/`. Reload the list of community plugins, then turn on Bases Filter Switches.
 
@@ -100,6 +100,8 @@ Sponsor through the links above, then sign in in the plugin settings. Select Ref
 
 ## Settings
 
+After a minor or major update, this plugin opens one What's new tab in the background. The tab and settings card suggest other NoteMods plugins and Zovo Chat and link to notemods.com for feedback ([privacy](https://notemods.com/privacy/)). The tab sends no data. Turn the tab off in Settings.
+
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/settings.png" alt="Settings with the Pro section and the add button setting" width="720">
 
 | Setting | Default | Allowed values |
@@ -112,15 +114,11 @@ The Pro section shows your GitHub account, the Pro status, and the Sign in, Refr
 
 ### Where is the state of the switches saved?
 
-In the filters of the base file. A switch is on when its filter is in the top-level filters. A hand-typed filter that matches a switch shows that switch as on.
+In the filters of the base file. A hand-typed filter that matches a switch shows that switch as on.
 
 ### Does it change the rest of my base file?
 
 It edits only the top-level `filters` and its own `filterSwitches` key, and it keeps your comments, key order and quotes. Core Bases rewrites the whole file when you change a view, and removes its comments.
-
-### Can a switch change one view only?
-
-No. Switches change the top-level filters, so they apply to each view of the base.
 
 ### Do base code blocks get switches?
 

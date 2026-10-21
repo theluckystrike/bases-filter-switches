@@ -32,6 +32,9 @@ import { SwitchBar, type BarHost } from './bar';
 import type { SponsorsManager } from './license/index';
 import { createGitHubSponsors, sponsorsSettingItems } from './license/github-obsidian';
 import { bindPro, isPro, onProChange, PRO_UI, SPONSORS } from './pro';
+import { setupHello } from './hello/index';
+import WHATS_NEW from './whats-new.json';
+import { helloSettingItems } from './hello/settings';
 
 /** How often to ask the license state whether a check is due. It sends a request only when signed in and due (7 days). */
 const PRO_TICK_MS = 6 * 60 * 60 * 1000;
@@ -55,6 +58,8 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 	private observer: MutationObserver | null = null;
 
 	async onload(): Promise<void> {
+		// First: "What's new" reads its state before the settings load (packages/hello). It does not wait.
+		setupHello(this, WHATS_NEW);
 		await this.loadSettings();
 		// No request here: a request needs a GitHub sign in first (Settings, Pro, Sign in with GitHub).
 		const pro = createGitHubSponsors(this.app, this.manifest.id, SPONSORS, this);
@@ -531,6 +536,11 @@ class FilterSwitchSettingTab extends PluginSettingTab {
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
+		// The product rows, then the "More from NoteMods" card (packages/hello).
+		return [...this.productSettingDefinitions(), ...helloSettingItems()];
+	}
+
+	productSettingDefinitions(): SettingDefinitionItem[] {
 		return [
 			...(this.plugin.pro ? sponsorsSettingItems(this.plugin.pro, PRO_UI) : []),
 			{
