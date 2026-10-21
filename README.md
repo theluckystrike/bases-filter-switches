@@ -2,13 +2,15 @@
 
 Bases Filter Switches puts a row of one-click switches under the toolbar of a base. Each switch is a saved filter, such as "Todo" for `status == "todo"`. Click it and the base shows only those notes. Click again to remove the filter. You do not open the filter editor, and you do not need one view for each mix of filters.
 
-The switches work in base files and in embedded bases. A switch changes the filter of the base file itself, not the filter of one view or layout.
+The switches work in base files and embeds. Each switch changes the base file filters, not one view.
 
-The free version gives each base one group of up to 3 switches. Pro removes the limit, adds presets with a command for each, adds default switches, and builds switches from the values of a property. Pro costs $5 a month, or $15 once, through GitHub Sponsors. A total payment of $15 meets the payment requirement for Pro. Sign-in and the checks below still apply.
+The free version gives each base one group of up to 3 switches. Pro removes that limit, adds presets with commands, default switches, and switches from property values. A total payment of $15 meets the payment requirement for Pro. Sign-in and the checks below still apply.
 
 ## Features
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/bases-filter-switches.gif" alt="Clicking Todo, then Doing, then All, then Done above a base of tasks; the rows change after each click" width="720">
+
+Free gives each base one group of up to 3 switches. Pro removes that limit and adds presets, default switches, and property value switches. Pro costs $15 one time or $5 a month. Choose [GitHub Sponsors](https://github.com/sponsors/theluckystrike?metadata_source=bases-filter-switches) or the [$15 one-time offer](https://github.com/sponsors/theluckystrike/sponsorships?tier_id=666162&metadata_source=bases-filter-switches).
 
 ### Switches above a base
 
@@ -94,7 +96,7 @@ filterSwitches:
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/pro-settings.png" alt="The Pro section of the settings after sign in, with the GitHub account and the Pro status" width="720">
 
-Sponsor on [GitHub Sponsors](https://github.com/sponsors/theluckystrike). Open the plugin settings and select "Sign in with GitHub". Use Refresh after you start a sponsorship. Read the account and offline limits below.
+Sponsor through the links above, then sign in in the plugin settings. Select Refresh after a sponsorship change. Read the account and offline limits below.
 
 ## Settings
 
@@ -141,6 +143,8 @@ After sign in, Bases Filter Switches sends one query to `https://api.github.com/
 After a successful check, Pro can work offline for up to 14 days. Sign out or a negative sponsorship answer turns Pro off. The plugin stores the GitHub token through the secret storage API of Obsidian. It does not put the token in its saved settings or its local sponsorship data. The local storage of this device keeps your GitHub login, the tier and the time of the last check. Sign out clears the token. You can also revoke the access in your GitHub settings, under Applications.
 
 ## Support
+
+Plugin page: [bases-filter-switches](https://notemods.com/plugins/bases-filter-switches/).
 
 Report a bug or ask for a feature in the issue tracker of this repository. Include your Obsidian version and the `filters` and `filterSwitches` parts of the base file.
 
