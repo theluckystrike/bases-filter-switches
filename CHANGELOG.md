@@ -1,5 +1,11 @@
 # bases-filter-switches
 
+## 1.4.0
+
+### Minor Changes
+
+- Add a "Filter by property" button that shows only the notes where one property is or contains a value, with a chip to remove the filter.
+
 ## 1.3.0
 
 ### Minor Changes

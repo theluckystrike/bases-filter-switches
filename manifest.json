@@ -1,7 +1,7 @@
 {
 	"id": "bases-filter-switches",
 	"name": "Bases Filter Switches",
-	"version": "1.3.0",
+	"version": "1.4.0",
 	"minAppVersion": "1.13.4",
 	"description": "One-click switches above a base that turn saved filters on and off, in base tabs and embedded bases.",
 	"author": "Michael Lip",

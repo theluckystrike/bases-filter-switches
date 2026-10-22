@@ -33,6 +33,10 @@ function host(state: { text: string }): BarHost {
 		addSwitch: () => undefined,
 		editSwitch: () => undefined,
 		removeSwitch: noop,
+		quickFilter: () => undefined,
+		quickState: () => null,
+		removeQuick: noop,
+		clearQuick: noop,
 	};
 }
 

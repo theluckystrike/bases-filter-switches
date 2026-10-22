@@ -2,9 +2,9 @@
 
 Bases Filter Switches puts a row of one-click switches under the toolbar of a base. Each switch is a saved filter, such as "Todo" for `status == "todo"`. Click it and the base shows only those notes. Click again to remove the filter. You do not open the filter editor, and you do not need one view for each mix of filters.
 
-The switches work in base files and embeds. Each switch changes the base file filters, not one view.
+Each switch changes the base file filters, not one view.
 
-The free version gives each base one group of up to 3 switches. Pro removes that limit, adds presets with commands, default switches, and switches from property values.
+The free version gives each base one group of up to 3 switches and one quick property filter. Pro removes the switch limits, allows up to 5 quick filters, and adds presets with commands, default switches, and switches from property values.
 
 ## Features
 
@@ -16,29 +16,37 @@ Pro costs $15 one time or $5 a month. Choose [GitHub Sponsors](https://github.co
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/base-file.png" alt="A base of tasks with the Todo and Doing switches on, showing 7 of 10 notes" width="720">
 
-Switches come in groups, for example a Status group with Todo, Doing and Done. The plugin joins switches of one group with "or": Todo and Doing together show the notes that are todo or doing. It joins different groups with "and". The "All" switch of a group turns off the switches of that group.
+Switches come in groups, for example a Status group with Todo, Doing and Done. The plugin joins switches of one group with "or": Todo and Doing together show the notes that are todo or doing. It joins different groups with "and".
 
-Each switch is a real filter. When a switch is on, its filter is in the top-level filters of the base, next to the filters you wrote yourself. When you open the filter editor, you see it there. The plugin does not change the text of your own filters. A top-level filter that is not an "and" list becomes the first item of a new "and" list.
+Each switch is a real filter. When a switch is on, its filter is in the top-level filters of the base, next to the filters you wrote yourself. The plugin does not change the text of your own filters. A top-level filter that is not an "and" list becomes the first item of a new "and" list.
 
 ### Pause and resume a group
 
-Select "Pause" beside the group name to remove that group's active filters. Select "Resume" to put the saved selection back. The base file keeps the paused labels, so you can close and reopen it before you resume. This control is free. The free group and switch limits still apply.
+Select "Pause" beside the group name to remove that group's active filters. Select "Resume" to put the saved selection back. The base file keeps the paused labels, so you can close and reopen it before you resume. This control is free.
 
-"All" clears the selection and its saved pause. A click on a switch starts a new selection. Presets and default switches also replace a saved pause. Other filter groups and view filters stay as they are.
+"All", a switch click, a preset or the default replaces a saved pause. Other groups and view filters stay as they are.
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/pause-group.png" alt="The Status group is paused and offers a Resume button" width="720">
+
+### Quick property filter
+
+<img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/quick-filter.png" alt="The quick filter chip area: work in the bar, and the base shows only the 5 work notes" width="720">
+
+Select the filter button at the end of the bar, or run "Filter the current base by a property". Choose a property from your vault, then "is" or "contains text", then a value. For "is", the list shows the values that notes have now. The filter goes to the end of the top-level filters and shows as a chip, such as `author: Le Guin`. Select × on the chip to remove it. "Clear quick filters" in the Presets menu or as a command removes all of them.
+
+The chips stay in the plugin data, not in the base file. Presets and default switches do not save quick filters. A quick filter edited by hand becomes a normal filter. The free version has one quick filter at a time, so a new one replaces the old one. Pro joins up to 5 with "and". The window works with Tab, the arrow keys, Enter and Escape.
 
 ### Embedded bases
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/embedded-base.png" alt="A note with an embedded base and the Done switch on, showing 3 notes" width="720">
 
-A base embedded in a note with `![[Tasks.base]]` gets the same switches under its toolbar. A switch changes the base file, so each note that embeds this base shows the same filter.
+A base embedded in a note with `![[Tasks.base]]` gets the same switches under its toolbar. Each note that embeds this base shows the same filter.
 
 ### Add a switch without writing YAML
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/add-switch.png" alt="The Add a filter switch window with fields for the group, the label and the filter" width="720">
 
-Select the + button, or run "Add a filter switch to the current base". Type a group, a label and a filter. The filter uses the same syntax as the filter editor, for example `status == "todo"` or `file.hasTag("project")`. You can also pick a top-level filter that the base already has, and that filter becomes a switch. On desktop, right-click a switch to edit or remove it.
+Select the + button, or run "Add a filter switch to the current base". Type a group, a label and a filter. The filter uses the same syntax as the filter editor, for example `status == "todo"`. You can also pick a top-level filter that the base already has, and that filter becomes a switch. On desktop, right-click a switch to edit or remove it.
 
 ### Theme colors and keyboard
 
@@ -50,7 +58,7 @@ The switches take their colors from your theme, in light and dark mode. A switch
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/property-values.png" alt="An Area group with one switch for each value of the area property: home, learning and work" width="720">
 
-Run "Add switches from the values of a property" and choose a property such as `area`. The group gets one switch for each value that notes have now, and new values show up by themselves. For a property with list values, the switches use `list(property).contains(value)`. This also matches scalar values exactly. Values with the same label share one switch. You can make the group "one at a time", so a click on one switch turns the others off.
+Run "Add switches from the values of a property" and choose a property such as `area`. The group gets one switch for each value that notes have now, and new values show up by themselves. For a property with list values, the switches use `list(property).contains(value)`. You can make the group "one at a time", so a click on one switch turns the others off.
 
 ### Presets (Pro)
 
@@ -62,7 +70,7 @@ A preset saves which switches are on, in each group, under one name. Choose it f
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/default-switches.png" alt="A base of tasks after the command that applies the saved default: Todo is on again and the base shows 5 notes" width="720">
 
-Select "Save switches as the default" in the Presets menu to save the switches that are on now under the key `filterSwitches.default`. The command "Apply the default switches of the current base" or the menu item "Apply the default switches" turns them back on. "Clear the saved default" removes the default.
+Select "Save switches as the default" in the Presets menu to save the switches that are on now. "Apply the default switches", in the menu or as a command, turns them back on. "Clear the saved default" removes it.
 
 ## Install
 
@@ -74,10 +82,9 @@ Bases Filter Switches needs Obsidian 1.13.4 or newer and the Bases core plugin. 
 
 ## Usage
 
-1. Open a base. Under the toolbar you see a small "+ Filter switch" button.
-2. Select it and add a switch, for example group "Status", label "Todo", filter `status == "todo"`.
-3. Add more switches to the group. Click them to filter the base.
-4. Select "All" to turn off the switches of the group.
+1. Open a base and select "+ Filter switch" under the toolbar.
+2. Add a switch, for example group "Status", label "Todo", filter `status == "todo"`.
+3. Click the switches to filter the base. "All" turns off the switches of the group.
 
 The base file keeps the switches under the key `filterSwitches`. Core Bases ignores this key and keeps it when it saves the file. You can edit it by hand:
 
@@ -96,7 +103,7 @@ filterSwitches:
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/pro-settings.png" alt="The Pro section of the settings after sign in, with the GitHub account and the Pro status" width="720">
 
-Sponsor through the links above, then sign in in the plugin settings. Select Refresh after a sponsorship change. Read the account and offline limits below.
+Sponsor through the links above, then sign in in the plugin settings.
 
 ## Settings
 
@@ -106,7 +113,7 @@ After a minor or major update, this plugin opens one What's new tab in the backg
 
 | Setting | Default | Allowed values |
 | --- | --- | --- |
-| Show the add button on bases without switches | On | On or off |
+| Show the add button on bases without switches | On | On or off. Off also hides the filter button there. |
 
 The Pro section shows your GitHub account, the Pro status, and the Sign in, Refresh and Sign out buttons.
 
@@ -123,10 +130,6 @@ It edits only the top-level `filters` and its own `filterSwitches` key, and it k
 ### Do base code blocks get switches?
 
 No. The plugin only edits base files. Embed a base file with `![[name.base]]`.
-
-### Is there another plugin for this?
-
-Bases Toolbox turns single top-level filter conditions off and on from a window. This plugin puts the switches on the base and its embeds.
 
 ## Payment, account and network
 
@@ -153,8 +156,6 @@ npm ci
 npm run build
 npm test
 ```
-
-The tests check golden cases for the switch operations on real base files. An end-to-end test clicks the switches in Obsidian and checks the rows of the base.
 
 ## License
 

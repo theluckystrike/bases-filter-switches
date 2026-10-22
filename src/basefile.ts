@@ -21,7 +21,7 @@
 // a switch is on when its filter text is an item of the top-level "and" list (one switch of a group), or when an
 // "or" item of that list holds only filters of one group (several switches of a group). Turning switches on and
 // off edits only those items, through the YAML document model, so comments, key order and quoting stay.
-import { isMap, isScalar, isSeq, parseDocument, YAMLSeq, type Document, type Node, type YAMLMap } from 'yaml';
+import { Document, isMap, isScalar, isSeq, parseDocument, YAMLSeq, type Node, type YAMLMap } from 'yaml';
 
 export const KEY = 'filterSwitches';
 export const FREE_SWITCHES = 3;
@@ -112,9 +112,11 @@ export function limitConfig(config: SwitchConfig, pro: boolean): { config: Switc
 	return { config: { groups, presets: [] }, hidden: total - shown };
 }
 
-/** A Bases expression for a note property: bare when it is a plain identifier, else note["name"]. */
+/** A Bases expression for a note property: bare when it is a plain identifier and not a Bases object, else note["name"]. */
 export function propertyRef(property: string): string {
-	return /^[A-Za-z_][A-Za-z0-9_]*$/.test(property) ? property : `note[${JSON.stringify(property)}]`;
+	// file, note, formula and this are Bases objects, so a property with one of these names needs note["..."].
+	const reserved = ['file', 'note', 'formula', 'this'].includes(property);
+	return !reserved && /^[A-Za-z_][A-Za-z0-9_]*$/.test(property) ? property : `note[${JSON.stringify(property)}]`;
 }
 
 function literal(v: string | number | boolean): string {
@@ -208,26 +210,20 @@ function clauseFor(group: GroupDef, labels: string[]): string | { or: string[] }
 	return filters.length === 1 ? (filters[0] as string) : { or: filters };
 }
 
-const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
-
 /**
  * Writes a selection into the top-level filters. Items that are not switch clauses are never touched.
  * A group's clause stays at the place of its old clause; a new clause goes to the end of the "and" list.
  * Returns the text unchanged (same string) when the filters already match the selection.
  */
 export function applySelection(text: string, groups: GroupDef[], selection: Selection): string {
-	const doc = parseDocument(text);
+	const doc = openDoc(text);
 	const own = owners(groups);
 	const wanted = new Map<string, string | { or: string[] }>();
 	for (const g of groups) {
 		const c = clauseFor(g, selection[g.name] ?? []);
 		if (c !== null) wanted.set(g.name, c);
 	}
-	const raw = doc.get('filters', true) as Node | undefined;
-	// An empty "filters:" key is no filter, not a null filter item.
-	const node = isScalar(raw) && raw.value === null ? undefined : raw;
-	const seq = andSeq(node);
-	const oldItems: unknown[] = seq ? seq.items : node === undefined || node === null ? [] : [node];
+	const { raw, seq, items: oldItems } = topNodes(doc);
 	const placed = new Set<string>();
 	const next: unknown[] = [];
 	for (const item of oldItems) {
@@ -246,11 +242,28 @@ export function applySelection(text: string, groups: GroupDef[], selection: Sele
 		if (w !== undefined && !placed.has(g.name)) next.push(doc.createNode(w));
 	}
 	if (same(next.map(toJS), oldItems.map(toJS))) return text;
+	writeTop(doc, raw, seq, next);
+	return render(doc);
+}
+
+/** The top-level filter node, its "and" list (null when it is not one) and its items as an "and" list. */
+function topNodes(doc: Document): { raw: Node | undefined; seq: YAMLSeq | null; items: unknown[] } {
+	const raw = doc.get('filters', true) as Node | undefined;
+	// An empty "filters:" key is no filter, not a null filter item.
+	const node = isScalar(raw) && raw.value === null ? undefined : raw;
+	const seq = andSeq(node);
+	return { raw, seq, items: seq ? seq.items : node === undefined || node === null || emptyAnd(node) ? [] : [node] };
+}
+
+/**
+ * The one writer of the top-level filters, for switches and quick filters. A filter that is not an "and" list becomes
+ * the first item of a new "and" list. A base without filters gets the key at the top. No items removes the key.
+ */
+function writeTop(doc: Document, raw: Node | undefined, seq: YAMLSeq | null, next: unknown[]): void {
 	if (next.length === 0) doc.delete('filters');
 	else if (seq) seq.items = next;
 	else if (raw === undefined && isMap(doc.contents)) (doc.contents.items as unknown[]).unshift(doc.createPair('filters', andNode(doc, next)));
 	else doc.set('filters', andNode(doc, next));
-	return render(doc);
 }
 
 function toJS(item: unknown): unknown {
@@ -263,13 +276,15 @@ function andSeq(node: Node | undefined): YAMLSeq | null {
 	const pair = node.items[0];
 	const key = isScalar(pair?.key) ? pair.key.value : pair?.key;
 	if (key !== 'and' || !pair) return null;
-	if (isSeq(pair.value)) return pair.value;
-	// An empty "and:" key is an empty list.
-	const empty = pair.value === null || (isScalar(pair.value) && pair.value.value === null);
-	if (!empty) return null;
-	const seq = new YAMLSeq();
-	pair.value = seq;
-	return seq;
+	return isSeq(pair.value) ? pair.value : null;
+}
+
+/** True for exactly {and: } with an empty value: an empty "and" list. A read never changes the document. */
+function emptyAnd(node: Node | undefined): boolean {
+	if (!isMap(node) || node.items.length !== 1) return false;
+	const pair = node.items[0];
+	const key = isScalar(pair?.key) ? pair.key.value : pair?.key;
+	return key === 'and' && (pair?.value === null || (isScalar(pair?.value) && pair.value.value === null));
 }
 
 function andNode(doc: Document, items: unknown[]): YAMLMap {
@@ -279,8 +294,141 @@ function andNode(doc: Document, items: unknown[]): YAMLMap {
 	return map;
 }
 
+// ---- writing a document back with the least change ----
+//
+// The yaml Document model keeps comments, quotes and key order. A full re-render still changes the layout of a file
+// that core Bases did not write (CRLF, 4-space indents, no final newline, extra blank lines). So a write renders the
+// document in the indent style of the file, then copies only the top-level keys whose value changed into the original
+// text, as whole lines with the original line ending. Every other byte of the file stays.
+
+const SOURCE = new WeakMap<Document, string>();
+
+/** parseDocument that remembers the text, so render() can keep the bytes that did not change. */
+function openDoc(text: string): Document {
+	const doc = parseDocument(text);
+	SOURCE.set(doc, text);
+	return doc;
+}
+
+interface Style {
+	eol: string;
+	indent: number;
+	indentSeq: boolean;
+}
+
+/** Line ending and indentation of a file. A file without indented lines gets the core Bases style. */
+function styleOf(text: string): Style {
+	const eol = text.includes('\r\n') ? '\r\n' : '\n';
+	const lines = text.split(/\r?\n/);
+	let indent = 2;
+	let indentSeq = true;
+	let seenIndent = false;
+	let seenSeq = false;
+	for (let i = 1; i < lines.length && !(seenIndent && seenSeq); i++) {
+		const line = lines[i] ?? '';
+		if (line.trim() === '' || line.trimStart().startsWith('#')) continue;
+		let j = i - 1;
+		while (j >= 0 && ((lines[j] ?? '').trim() === '' || (lines[j] ?? '').trimStart().startsWith('#'))) j--;
+		const parent = lines[j] ?? '';
+		// Only a key that opens a block ("name:" at the end of the line) tells the indent of its children.
+		if (!/^\s*(?:- )?[^\s#-][^:]*:\s*(?:#.*)?$/.test(parent)) continue;
+		const pi = parent.length - parent.trimStart().length + (parent.trimStart().startsWith('- ') ? 2 : 0);
+		const ci = line.length - line.trimStart().length;
+		if (line.trimStart().startsWith('- ')) {
+			if (!seenSeq) indentSeq = ci > pi;
+			seenSeq = true;
+			if (ci > pi && !seenIndent) {
+				indent = ci - pi;
+				seenIndent = true;
+			}
+		} else if (ci > pi && !seenIndent) {
+			indent = ci - pi;
+			seenIndent = true;
+		}
+	}
+	return { eol, indent: indent >= 1 && indent <= 8 ? indent : 2, indentSeq };
+}
+
+interface Region {
+	start: number;
+	end: number;
+}
+
+/**
+ * The top-level keys of a block map and their text: whole lines from the key to the next key, without the blank and
+ * column-0 comment lines just before the next key. Null when the text is not a block map with plain keys at column 0.
+ */
+function regionsOf(text: string): Map<string, Region> | null {
+	const doc = parseDocument(text);
+	if (doc.errors.length > 0 || !isMap(doc.contents) || doc.contents.flow) return null;
+	const starts: { key: string; start: number }[] = [];
+	for (const pair of doc.contents.items) {
+		if (!isScalar(pair.key) || typeof pair.key.value !== 'string' || !pair.key.range) return null;
+		const at = pair.key.range[0];
+		const start = text.lastIndexOf('\n', at - 1) + 1;
+		if (start !== at) return null;
+		starts.push({ key: pair.key.value, start });
+	}
+	const out = new Map<string, Region>();
+	starts.forEach(({ key, start }, i) => {
+		let end = starts[i + 1]?.start ?? text.length;
+		// Give back the blank and column-0 comment lines before the next key (or the end) to the text outside.
+		for (;;) {
+			const prev = text.lastIndexOf('\n', end - 2) + 1;
+			if (prev <= start) break;
+			const line = text.slice(prev, end).replace(/\r?\n$/, '');
+			if (line.trim() !== '' && !line.startsWith('#') && line !== '...') break;
+			end = prev;
+		}
+		out.set(key, { start, end });
+	});
+	return out;
+}
+
+const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
+
+/** Puts the changed top-level keys of rendered into original. Null when that is not safe; then the caller renders all. */
+function splice(original: string, rendered: string, style: Style): string | null {
+	const ro = regionsOf(original);
+	const rn = regionsOf(rendered);
+	if (!ro || !rn) return null;
+	const before = rec(parseDocument(original).toJS()) ?? {};
+	const after = rec(parseDocument(rendered).toJS()) ?? {};
+	const eolText = (t: string): string => (style.eol === '\n' ? t : t.replace(/\r?\n/g, style.eol));
+	const first = Math.min(...[...ro.values()].map((r) => r.start));
+	const edits: { start: number; end: number; text: string }[] = [];
+	const appends: string[] = [];
+	for (const [key, r] of rn) {
+		if (ro.has(key) && same(before[key], after[key])) continue;
+		const text = eolText(rendered.slice(r.start, r.end));
+		const old = ro.get(key);
+		if (old) edits.push({ ...old, text });
+		else if (key === 'filters') edits.push({ start: first, end: first, text });
+		else appends.push(text);
+	}
+	for (const [key, r] of ro) if (!rn.has(key)) edits.push({ ...r, text: '' });
+	let out = original;
+	for (const e of edits.sort((a, b) => b.start - a.start || b.end - a.end)) out = out.slice(0, e.start) + e.text + out.slice(e.end);
+	for (const text of appends) out += (out === '' || out.endsWith('\n') ? '' : style.eol) + text;
+	out = sameEnding(original, out, style.eol);
+	return same(parseDocument(out).toJS(), after) ? out : null;
+}
+
+/** Gives out the same final newline (or none) as original. */
+function sameEnding(original: string, out: string, eol: string): string {
+	if (original.endsWith('\n') || original === '') return out.endsWith('\n') || out === '' ? out : out + eol;
+	return out.replace(/(?:\r?\n)+$/, '');
+}
+
 function render(doc: Document): string {
-	return doc.toString({ lineWidth: 0, flowCollectionPadding: false });
+	const original = SOURCE.get(doc);
+	const style = original === undefined ? { eol: '\n', indent: 2, indentSeq: true } : styleOf(original);
+	const rendered = doc.toString({ lineWidth: 0, flowCollectionPadding: false, indent: style.indent, indentSeq: style.indentSeq });
+	if (original === undefined) return rendered;
+	const spliced = splice(original, rendered, style);
+	if (spliced !== null) return spliced;
+	const full = style.eol === '\n' ? rendered : rendered.replace(/\r?\n/g, style.eol);
+	return original.endsWith('\n') || original === '' ? full : full.replace(/\r?\n$/, '');
 }
 
 /** The plugin-owned map, created at the end of the file when it is missing. */
@@ -308,7 +456,7 @@ function findByName(seq: YAMLSeq, name: string): YAMLMap | null {
 
 /** Adds one switch (and its group when new). An existing switch with the same label gets the new filter. */
 export function addSwitch(text: string, group: string, sw: SwitchDef): string {
-	const doc = parseDocument(text);
+	const doc = openDoc(text);
 	const groups = listIn(doc, ownMap(doc), 'groups');
 	let g = findByName(groups, group);
 	if (!g) {
@@ -324,7 +472,7 @@ export function addSwitch(text: string, group: string, sw: SwitchDef): string {
 
 /** Adds a group whose switches come from the values of a property (Pro). */
 export function addPropertyGroup(text: string, group: string, property: string, single: boolean): string {
-	const doc = parseDocument(text);
+	const doc = openDoc(text);
 	const groups = listIn(doc, ownMap(doc), 'groups');
 	const old = findByName(groups, group);
 	if (old) groups.items.splice(groups.items.indexOf(old), 1);
@@ -336,7 +484,7 @@ export function addPropertyGroup(text: string, group: string, property: string, 
 export function removeSwitch(text: string, groups: GroupDef[], group: string, label: string): string {
 	const sel = readSelection(text, groups);
 	sel[group] = (sel[group] ?? []).filter((l) => l !== label);
-	const doc = parseDocument(applySelection(text, groups, sel));
+	const doc = openDoc(applySelection(text, groups, sel));
 	const own = doc.get(KEY, true);
 	const list = isMap(own) ? own.get('groups', true) : null;
 	const g = isSeq(list) ? findByName(list, group) : null;
@@ -367,7 +515,7 @@ export function editSwitch(text: string, from: { group: string; label: string },
 
 /** Saves a preset (replaces one with the same name). */
 export function savePreset(text: string, preset: PresetDef): string {
-	const doc = parseDocument(text);
+	const doc = openDoc(text);
 	const presets = listIn(doc, ownMap(doc), 'presets');
 	const node = doc.createNode({ name: preset.name, on: preset.on });
 	const old = findByName(presets, preset.name);
@@ -377,7 +525,7 @@ export function savePreset(text: string, preset: PresetDef): string {
 }
 
 export function removePreset(text: string, name: string): string {
-	const doc = parseDocument(text);
+	const doc = openDoc(text);
 	const own = doc.get(KEY, true);
 	const presets = isMap(own) ? own.get('presets', true) : null;
 	if (!isSeq(presets)) return text;
@@ -417,7 +565,7 @@ export function defaultSelection(groups: GroupDef[], keys: string[]): Selection 
 
 /** Saves the given keys as the default of the base (replaces the old default). */
 export function saveDefault(text: string, keys: string[]): string {
-	const doc = parseDocument(text);
+	const doc = openDoc(text);
 	const seq = doc.createNode(keys) as YAMLSeq;
 	ownMap(doc).set('default', seq);
 	return render(doc);
@@ -425,7 +573,7 @@ export function saveDefault(text: string, keys: string[]): string {
 
 /** Removes the saved default. Returns the text unchanged when there is none. */
 export function clearDefault(text: string): string {
-	const doc = parseDocument(text);
+	const doc = openDoc(text);
 	const own = doc.get(KEY, true);
 	if (!isMap(own) || !own.has('default')) return text;
 	own.delete('default');
@@ -442,7 +590,7 @@ export function readPaused(text: string, group: string): string[] | null {
 
 /** A new selection or an explicit reset discards the paused selection it replaces. */
 export function clearPaused(text: string, group: string | null = null): string {
-	const doc = parseDocument(text);
+	const doc = openDoc(text);
 	const own = doc.get(KEY, true);
 	const paused = isMap(own) ? own.get('paused', true) : null;
 	if (!isMap(own) || !isMap(paused)) return text;
@@ -467,7 +615,7 @@ export function toggleGroupPaused(text: string, groups: GroupDef[], name: string
 		return applySelection(clearPaused(text, name), groups, { ...selection, [name]: group.single ? known.slice(0, 1) : known });
 	}
 	if (on.length === 0) return text;
-	const doc = parseDocument(applySelection(text, groups, { ...selection, [name]: [] }));
+	const doc = openDoc(applySelection(text, groups, { ...selection, [name]: [] }));
 	const own = ownMap(doc);
 	let paused: unknown = own.get('paused', true);
 	if (!isMap(paused)) {
@@ -491,6 +639,284 @@ export function reset(selection: Selection, group: string | null): Selection {
 	return Object.fromEntries(Object.entries(selection).map(([g, l]) => [g, group === null || g === group ? [] : l]));
 }
 
+// ---- quick property filters ----
+//
+// A quick filter is one plain item of the top-level "and" list. That item (and the "and" list when the filters were not
+// one yet) is the only text that the plugin writes into the base file for it. The chips and the undo data live in the
+// plugin data, per base file path (QuickState). A quick filter is not a switch: presets, defaults and pauses never read
+// or save it. When the user edits its text by hand, the chip goes and the item is a hand-typed filter.
+
+export const FREE_QUICK = 1;
+export const PRO_QUICK = 5;
+export type QuickMatch = 'is' | 'contains';
+export interface QuickInput {
+	property: string;
+	match: QuickMatch;
+	value: string;
+}
+export interface QuickFilter extends QuickInput {
+	/** Stable id of the chip: a hash of the filter text. */
+	id: string;
+	filter: string;
+}
+/** The quick filters of one base file, kept in the plugin data (never in the base file). */
+export interface QuickState {
+	chips: QuickFilter[];
+	/** The top-level filters text (LF) from before the first chip, "" for no filters key. Null when it can no longer be used. */
+	origin: string | null;
+	/** Hash of the top-level filters text just after the last write of the plugin. */
+	live: string;
+}
+
+/** The distinct values that notes have now, as the labels of the generator. The "is" suggestions. */
+export function quickValues(property: string, values: unknown[]): string[] {
+	return switchesFromValues(property, values).map((s) => s.label);
+}
+
+/**
+ * The expression of a quick filter. "is" uses the generator of property switches: list(ref).contains(v) for a list
+ * property, ref == v for a scalar one. "contains" matches lowercase text. Null when the value is empty.
+ */
+export function quickExpression(input: QuickInput, values: unknown[]): string | null {
+	const value = input.value.trim();
+	if (!input.property.trim() || value === '') return null;
+	const ref = propertyRef(input.property);
+	if (input.match === 'contains') return `${ref}.toString().lower().contains(${JSON.stringify(value.toLowerCase())})`;
+	const known = switchesFromValues(input.property, values).find((s) => s.label === value);
+	if (known) return known.filter;
+	return values.some((v) => Array.isArray(v)) ? `list(${ref}).contains(${JSON.stringify(value)})` : `${ref} == ${JSON.stringify(value)}`;
+}
+
+/** A short stable hash of a text (djb2, base 36). */
+export function hashText(text: string): string {
+	let h = 5381;
+	for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+	return h.toString(36);
+}
+
+/** The text of the top-level filters key with LF line endings, "" when there is none, null when it cannot be found. */
+function filtersText(text: string): string | null {
+	const regions = regionsOf(text);
+	if (!regions) return null;
+	const r = regions.get('filters');
+	return r ? text.slice(r.start, r.end).replace(/\r\n/g, '\n') : '';
+}
+
+const liveHash = (text: string): string => hashText(filtersText(text) ?? `\u0000${text}`);
+
+/** Writes the saved text of the top-level filters back in place. Null when the result is not valid YAML. */
+function restoreFilters(text: string, before: string): string | null {
+	const r = regionsOf(text)?.get('filters');
+	if (!r) return null;
+	const eol = styleOf(text).eol;
+	let back = before;
+	if (back !== '' && !back.endsWith('\n') && r.end < text.length) back += '\n';
+	if (eol !== '\n') back = back.replace(/\n/g, eol);
+	const out = sameEnding(text, text.slice(0, r.start) + back + text.slice(r.end), eol);
+	return parseDocument(out).errors.length === 0 ? out : null;
+}
+
+const itemText = (item: unknown): string | null => {
+	const v = toJS(item);
+	return typeof v === 'string' ? v.trim() : null;
+};
+
+const topTexts = (text: string): (string | null)[] => topItems(rec(parseDocument(text).toJS())?.filters).map(itemText);
+
+/** The chips whose filter is still an item of the top-level filters. */
+export function activeQuick(text: string, state: QuickState | null | undefined): QuickFilter[] {
+	if (!state) return [];
+	const items = new Set(topTexts(text));
+	return state.chips.filter((q) => items.has(q.filter));
+}
+
+/** The top-level items after a write must be the old ones with exactly this change, and nothing else may change. */
+function checked(before: string, after: string, items: (string | null)[]): string | null {
+	const a = rec(parseDocument(before).toJS()) ?? {};
+	const doc = parseDocument(after);
+	if (doc.errors.length > 0) return null;
+	const b = rec(doc.toJS()) ?? {};
+	if (!same(topTexts(after), items)) return null;
+	const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+	for (const k of keys) if (k !== 'filters' && !same(a[k], b[k])) return null;
+	return after;
+}
+
+/** The plain or quoted YAML text of one filter item. */
+function itemSource(filter: string): string {
+	return String(new Document(filter).toString({ lineWidth: 0 })).replace(/\n$/, '');
+}
+
+/**
+ * Adds one line "- filter" after the last item of a block "and" list, with the indent and line ending of that list.
+ * The other lines stay byte for byte. Null when the filters are not a block "and" list.
+ */
+function insertLine(text: string, filter: string): string | null {
+	const doc = parseDocument(text);
+	const seq = andSeq(doc.get('filters', true) as Node | undefined);
+	if (!seq || seq.flow || seq.items.length === 0 || !seq.range) return null;
+	const first = seq.items[0] as Node;
+	if (!first.range) return null;
+	const dash = text.lastIndexOf('-', first.range[0]);
+	const lineStart = text.lastIndexOf('\n', dash - 1) + 1;
+	const indent = text.slice(lineStart, dash);
+	if (indent.trim() !== '') return null;
+	const eol = styleOf(text).eol;
+	const lastEnd = seq.range[1];
+	const nl = text.indexOf('\n', Math.max(lastEnd - 1, 0));
+	const at = nl < 0 ? text.length : nl + 1;
+	const line = `${indent}- ${itemSource(filter)}`;
+	const out = at === text.length && !text.endsWith('\n') ? `${text}${eol}${line}` : `${text.slice(0, at)}${line}${eol}${text.slice(at)}`;
+	return checked(text, out, [...topTexts(text), filter]);
+}
+
+/** Removes the line of the last item with exactly this text from a block "and" list. Null when that is not one line. */
+function deleteLine(text: string, filter: string): string | null {
+	const doc = parseDocument(text);
+	const seq = andSeq(doc.get('filters', true) as Node | undefined);
+	if (!seq || seq.flow) return null;
+	let index = -1;
+	for (let i = seq.items.length - 1; i >= 0; i--) if (itemText(seq.items[i]) === filter) { index = i; break; }
+	const node = seq.items[index] as Node | undefined;
+	if (!node?.range) return null;
+	const dash = text.lastIndexOf('-', node.range[0]);
+	const start = text.lastIndexOf('\n', dash - 1) + 1;
+	if (text.slice(start, dash).trim() !== '') return null;
+	const nl = text.indexOf('\n', Math.max(node.range[1] - 1, 0));
+	if (nl >= 0 && text.slice(node.range[1], nl).trim().replace(/^#.*/, '') !== '') return null;
+	const end = nl < 0 ? text.length : nl + 1;
+	const out = sameEnding(text, text.slice(0, start) + text.slice(end), styleOf(text).eol);
+	const items = topTexts(text);
+	items.splice(index, 1);
+	return items.length > 0 ? checked(text, out, items) : null;
+}
+
+/** Fallback writer for any filter shape: the document model, then render() keeps the other keys byte for byte. */
+function writeItems(text: string, change: (items: unknown[], doc: Document) => void): string {
+	const doc = openDoc(text);
+	const top = topNodes(doc);
+	const next = [...top.items];
+	change(next, doc);
+	if (same(next.map(toJS), top.items.map(toJS))) return text;
+	writeTop(doc, top.raw, top.seq, next);
+	return render(doc);
+}
+
+/** Removes the last top-level item with exactly this text. Returns false when there is none (the user edited it). */
+function dropItem(items: unknown[], filter: string): boolean {
+	for (let i = items.length - 1; i >= 0; i--) {
+		if (itemText(items[i]) !== filter) continue;
+		items.splice(i, 1);
+		return true;
+	}
+	return false;
+}
+
+export interface QuickResult {
+	text: string;
+	state: QuickState | null;
+	/** Why nothing changed, or null. */
+	error: string | null;
+}
+
+/** The state after a write: the chips that still have their item, and the hash of the new filters text. */
+function settle(text: string, chips: QuickFilter[], origin: string | null): QuickState | null {
+	const items = new Set(topTexts(text));
+	const kept = chips.filter((q) => items.has(q.filter));
+	return kept.length === 0 ? null : { chips: kept, origin, live: liveHash(text) };
+}
+
+/**
+ * Adds a quick filter at the end of the top-level "and" list. Free (max 1): the new filter replaces the old one.
+ * Pro (max 5): the filters are joined with "and", and one more is refused. Switch definitions, presets, the default
+ * and pauses stay as they are. The file gets only the filter item, and the "and" list when it had none.
+ */
+export function addQuick(text: string, groups: GroupDef[], input: QuickInput, values: unknown[], max: number, state: QuickState | null | undefined): QuickResult {
+	const filter = quickExpression(input, values);
+	if (filter === null) return { text, state: state ?? null, error: 'Choose a property and type a value.' };
+	const switchOwner = owners(groups).get(filter);
+	if (switchOwner) return { text, state: state ?? null, error: `The switch ${switchOwner.label} of the group ${switchOwner.group} has this filter. Turn on that switch.` };
+	if (topTexts(text).includes(filter)) return { text, state: state ?? null, error: 'The base already has this filter.' };
+	const active = activeQuick(text, state);
+	if (max > 1 && active.length >= max) return { text, state: state ?? null, error: `You can use ${max} quick filters at the same time. Remove one first.` };
+	let base = text;
+	let current: QuickState | null = state ? { ...state, chips: active } : null;
+	// Free: the old quick filter goes first, so it can give back its own text.
+	if (max <= 1) for (const q of [...active].reverse()) ({ text: base, state: current } = removeQuick(base, current, q.id));
+	// The saved original text is good only while the filters are exactly as the plugin left them.
+	let origin: string | null;
+	if (!current || current.chips.length === 0) origin = filtersText(base);
+	else origin = current.live === liveHash(base) ? current.origin : null;
+	const out = insertLine(base, filter) ?? writeItems(base, (items, doc) => items.push(doc.createNode(filter)));
+	const chip: QuickFilter = { ...input, value: input.value.trim(), filter, id: hashText(filter) };
+	return { text: out, state: settle(out, [...(current?.chips ?? []), chip], origin), error: null };
+}
+
+/**
+ * Removes one quick filter. When it is the last chip and the filters are exactly as the plugin left them, the saved
+ * text from before the first chip comes back byte for byte. Else only its own item goes (or nothing, when the user
+ * edited it). Text that is not in the plugin data is never written.
+ */
+export function removeQuick(text: string, state: QuickState | null | undefined, id: string): { text: string; state: QuickState | null } {
+	const chip = state?.chips.find((q) => q.id === id);
+	if (!state || !chip) return { text, state: state ?? null };
+	const rest = state.chips.filter((q) => q !== chip);
+	const untouched = state.live === liveHash(text);
+	const origin = untouched ? state.origin : null;
+	const others = activeQuick(text, { ...state, chips: rest });
+	if (others.length === 0 && origin !== null && topTexts(text).includes(chip.filter)) {
+		const back = restoreFilters(text, origin);
+		if (back !== null) return { text: back, state: null };
+	}
+	const out = deleteLine(text, chip.filter) ?? writeItems(text, (items) => void dropItem(items, chip.filter));
+	return { text: out, state: settle(out, others, origin) };
+}
+
+/** Removes every quick filter, newest first. */
+export function clearQuick(text: string, state: QuickState | null | undefined): { text: string; state: QuickState | null } {
+	let out = { text, state: state ?? null };
+	for (const q of [...(state?.chips ?? [])].reverse()) out = removeQuick(out.text, out.state, q.id);
+	return { text: out.text, state: null };
+}
+
+/**
+ * Golden-vector helper: runs quick steps with the state that the plugin keeps between them. Steps:
+ * ["add", property, match, value, values, pro], ["remove", filter], ["clear"], ["edit", from, to] (a hand edit).
+ */
+export function runQuickSteps(text: string, steps: unknown[][]): string {
+	let t = text;
+	let state: QuickState | null = null;
+	for (const [kind, ...a] of steps) {
+		if (kind === 'add') ({ text: t, state } = addQuick(t, readConfig(t).groups, { property: String(a[0]), match: a[1] === 'contains' ? 'contains' : 'is', value: String(a[2]) }, (a[3] as unknown[] | undefined) ?? [], a[4] === true ? PRO_QUICK : FREE_QUICK, state));
+		else if (kind === 'remove') ({ text: t, state } = removeQuick(t, state, hashText(String(a[0]))));
+		else if (kind === 'clear') ({ text: t, state } = clearQuick(t, state));
+		else if (kind === 'edit') t = t.replace(String(a[0]), String(a[1]));
+		else throw new Error(`unknown quick step ${String(kind)}`);
+	}
+	return t;
+}
+
+/** The note properties that a view shows, in its column order (the "order" list of the view). */
+export function visibleProperties(text: string, view: string | null): string[] {
+	const views = rec(parseDocument(text).toJS())?.views;
+	if (!Array.isArray(views)) return [];
+	const chosen = rec(views.find((v) => view !== null && str(rec(v)?.name) === view) ?? views[0]);
+	const order = Array.isArray(chosen?.order) ? chosen.order : [];
+	const out: string[] = [];
+	for (const id of order.map(str)) {
+		if (!id || id.startsWith('file.') || id.startsWith('formula.')) continue;
+		const name = id.startsWith('note.') ? id.slice(5) : id;
+		if (name && !out.includes(name)) out.push(name);
+	}
+	return out;
+}
+
+/** The Property choices of the quick filter: the visible properties of the view first, then the others by name. */
+export function quickProperties(visible: string[], known: string[]): string[] {
+	const first = visible.filter((p) => known.includes(p));
+	return [...first, ...known.filter((p) => !first.includes(p)).sort((a, b) => a.localeCompare(b))];
+}
+
 /** Golden-vector entry point: one operation on a .base text. Returns the new text. */
 export function runOp(text: string, op: string, args: unknown[]): string {
 	const groups = readConfig(text).groups;
@@ -511,5 +937,7 @@ export function runOp(text: string, op: string, args: unknown[]): string {
 	if (op === 'save-default') return saveDefault(text, selectionKeys(readSelection(text, groups)));
 	if (op === 'clear-default') return clearDefault(text);
 	if (op === 'default') return hasDefault(text) ? applySelection(text, groups, defaultSelection(groups, readDefault(text))) : text;
+	if (op === 'quick') return runQuickSteps(text, [['add', ...args]]);
+	if (op === 'quick-steps') return runQuickSteps(text, args as unknown[][]);
 	throw new Error(`unknown op ${op}`);
 }

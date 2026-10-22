@@ -98,5 +98,13 @@
 		"note": "Tasks.base",
 		"eval": "(async () => { const p = app.plugins.plugins['bases-filter-switches']; p.pro.signOut(); await new Promise(r => setTimeout(r, 800)); const bar = [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar')].find(b => b.offsetParent); [...bar.querySelectorAll('button')].find(b => b.textContent === 'Todo').click(); await new Promise(r => setTimeout(r, 700)); bar.querySelector('.fsw-pause').click(); await new Promise(r => setTimeout(r, 700)); const resume = bar.querySelector('.fsw-pause'); if (resume.textContent !== 'Resume') throw new Error('Pause did not save the selection'); return 'free pause PASS'; })()",
 		"wait": 700
+	},
+	{
+		"feature": "quick-filter",
+		"caption": "A quick filter area: work from the Filter by property button: the chip is in the bar and the base shows the 5 work notes.",
+		"note": "Tasks.base",
+		"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); const bar = [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar')].find((b) => b.offsetParent); bar.querySelector('.fsw-quick').click(); await new Promise((r) => setTimeout(r, 500)); const [property, match] = [...document.querySelectorAll('.fsw-quick-modal select.dropdown:not(.is-measuring)')]; property.value = 'area'; property.dispatchEvent(new Event('change')); match.value = 'is'; match.dispatchEvent(new Event('change')); const input = document.querySelector('.fsw-quick-modal input'); input.value = 'work'; input.dispatchEvent(new Event('input')); document.querySelector('.fsw-quick-modal button.mod-cta').click(); await new Promise((r) => setTimeout(r, 900)); if (!bar.querySelector('.fsw-quick-chip')) throw new Error('no quick filter chip'); document.querySelectorAll('.suggestion-container').forEach((s) => s.remove()); return 'ok'; })()",
+		"after": "(async () => { const f = app.vault.getAbstractFileByPath('Bases Filter Switches/Tasks.base'); if (f) await app.plugins.plugins['bases-filter-switches'].clearQuick(f); return 'ok'; })()",
+		"wait": 900
 	}
 ]

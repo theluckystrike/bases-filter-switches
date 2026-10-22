@@ -1,6 +1,6 @@
 // The switch bar: one row of chips under the Bases toolbar, for a .base tab or a ![[x.base]] embed.
-import { Menu, type TFile } from 'obsidian';
-import { limitConfig, readConfig, readDefault, readPaused, readSelection, selectionKeys, switchKey, type GroupDef, type PresetDef, type Selection, type SwitchConfig } from './basefile';
+import { Menu, setIcon, type TFile } from 'obsidian';
+import { activeQuick, limitConfig, readConfig, readDefault, readPaused, readSelection, selectionKeys, switchKey, type GroupDef, type PresetDef, type QuickFilter, type QuickState, type Selection, type SwitchConfig } from './basefile';
 import { isPro } from './pro';
 
 export const BAR_CLASS = 'fsw-bar';
@@ -22,6 +22,17 @@ export interface BarHost {
 	addSwitch(file: TFile): void;
 	editSwitch(file: TFile, group: string, label: string, filter: string): void;
 	removeSwitch(file: TFile, groups: GroupDef[], group: string, label: string): Promise<void>;
+	/** Opens the "Filter by property" window. view is the name of the view that the base shows now, when known. */
+	quickFilter(file: TFile, view: string | null): void;
+	/** The quick filter chips of a base, from the plugin data. */
+	quickState(file: TFile): QuickState | null;
+	removeQuick(file: TFile, id: string): Promise<void>;
+	clearQuick(file: TFile): Promise<void>;
+}
+
+/** The chip text of a quick filter, for example "author: Le Guin". */
+export function quickLabel(q: QuickFilter): string {
+	return q.match === 'contains' ? `${q.property} contains ${q.value}` : `${q.property}: ${q.value}`;
 }
 
 export class SwitchBar {
@@ -56,13 +67,23 @@ export class SwitchBar {
 		const selection = readSelection(text, all);
 		const focused = this.el.contains(activeDocument.activeElement) ? activeDocument.activeElement?.getAttribute('data-fsw-key') : null;
 		this.el.empty();
+		const quick = activeQuick(text, this.host.quickState(this.file));
 		const empty = config.groups.every((g) => g.switches.length === 0);
 		this.el.toggleClass('fsw-empty', empty);
-		if (empty && hidden === 0 && !this.host.showAdd()) return;
-		for (const g of config.groups) if (g.switches.length > 0) this.renderGroup(g, all, selection, readPaused(text, g.name) !== null);
-		if (config.presets.length > 0 || isPro()) this.renderPresets(config.presets, selection, empty, all, isPro() ? readDefault(text) : []);
-		if (hidden > 0) this.el.createSpan({ cls: 'fsw-more', text: `${hidden} more with Pro` });
-		this.button('fsw-add', '+', 'add', empty ? 'Add a filter switch' : 'Add another filter switch', () => this.host.addSwitch(this.file)).setText(empty ? '+ Filter switch' : '+');
+		const controls = !empty || hidden > 0 || this.host.showAdd();
+		// Without controls, the bar still shows active quick filters, so they can be removed.
+		if (controls) {
+			for (const g of config.groups) if (g.switches.length > 0) this.renderGroup(g, all, selection, readPaused(text, g.name) !== null);
+			if (config.presets.length > 0 || isPro()) this.renderPresets(config.presets, selection, empty, all, isPro() ? readDefault(text) : [], quick.length > 0);
+			if (hidden > 0) this.el.createSpan({ cls: 'fsw-more', text: `${hidden} more with Pro` });
+			this.button('fsw-add', '+', 'add', empty ? 'Add a filter switch' : 'Add another filter switch', () => this.host.addSwitch(this.file)).setText(empty ? '+ Filter switch' : '+');
+		}
+		for (const q of quick) this.renderQuick(q);
+		if (controls) {
+			const filter = this.button('fsw-quick', '', 'quick', 'Filter by property', () => this.host.quickFilter(this.file, this.viewName()));
+			filter.setAttribute('title', 'Filter by property');
+			setIcon(filter, 'filter');
+		}
 		const again = focused ? this.el.querySelector<HTMLElement>(`[data-fsw-key="${CSS.escape(focused)}"]`) : null;
 		again?.focus();
 	}
@@ -95,7 +116,24 @@ export class SwitchBar {
 		}
 	}
 
-	private renderPresets(presets: PresetDef[], selection: Selection, empty: boolean, groups: GroupDef[], defaultKeys: string[]): void {
+	/** One active quick filter: its text and a remove button. */
+	private renderQuick(q: QuickFilter): void {
+		const label = quickLabel(q);
+		const chip = this.el.createSpan({ cls: 'fsw-quick-chip', attr: { title: q.filter } });
+		chip.createSpan({ cls: 'fsw-quick-text', text: label });
+		const remove = chip.createEl('button', { cls: 'fsw-quick-remove', attr: { type: 'button', 'aria-label': `Remove quick filter ${label}`, 'data-fsw-key': `quick-remove:${q.filter}` } });
+		setIcon(remove, 'x');
+		remove.addEventListener('click', () => void this.host.removeQuick(this.file, q.id));
+	}
+
+	/** The name of the view that the Bases toolbar above the bar shows, or null. */
+	private viewName(): string | null {
+		const header = this.el.previousElementSibling;
+		const name = header?.querySelector('.bases-toolbar-views-menu .text-button-label')?.textContent?.trim();
+		return name ? name : null;
+	}
+
+	private renderPresets(presets: PresetDef[], selection: Selection, empty: boolean, groups: GroupDef[], defaultKeys: string[], hasQuick: boolean): void {
 		if (empty) return;
 		const current = selectionKeys(selection).sort().join('\n');
 		const isDefault = defaultKeys.length > 0 && [...defaultKeys].sort().join('\n') === current;
@@ -111,6 +149,7 @@ export class SwitchBar {
 			menu.addItem((i) => i.setTitle('Save switches as the default').setIcon('bookmark').onClick(() => void this.host.saveDefault(this.file)));
 			menu.addItem((i) => i.setTitle('Clear the saved default').setIcon('x').onClick(() => void this.host.clearDefault(this.file)));
 			for (const p of presets) menu.addItem((i) => i.setTitle(`Delete preset ${p.name}`).setIcon('trash').onClick(() => void this.host.deletePreset(this.file, p.name)));
+			if (hasQuick) menu.addItem((i) => i.setTitle('Clear quick filters').setIcon('filter-x').onClick(() => void this.host.clearQuick(this.file)));
 			// Under the button, so the menu also opens in the right place from the keyboard.
 			const r = btn.getBoundingClientRect();
 			menu.showAtPosition({ x: r.left, y: r.bottom }, btn.doc);

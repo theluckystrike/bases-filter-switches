@@ -2,7 +2,7 @@
  "slug": "bases-filter-switches",
  "module": "bases-filter-switches/src/basefile",
  "function": "runOp",
- "note": "args = [.base file text, op, op args]; expected = the new file text. ops: toggle [group, label], reset [group or null], add [group, label, filter], remove [group, label], preset [name], save-preset [name], save-default [], clear-default [], default [] (no change when the base has no saved default). The state of a switch is read from the top-level filters: one filter of a group as an item of the top-level and list, or an or item that holds only filters of one group. Everything else in the file keeps its text, comments and quotes.",
+ "note": "args = [.base file text, op, op args]; expected = the new file text. ops: toggle [group, label], reset [group or null], add [group, label, filter], remove [group, label], preset [name], save-preset [name], save-default [], clear-default [], default [] (no change when the base has no saved default), quick [property, \"is\" or \"contains\", value, values that notes have now, pro], quick-steps [[step]...] with the quick state that the plugin keeps in its own data between steps (steps: add [property, match, value, values, pro], remove [filter], clear [], edit [from, to] for a hand edit). The state of a switch is read from the top-level filters: one filter of a group as an item of the top-level and list, or an or item that holds only filters of one group. Everything else in the file keeps its text, comments and quotes.",
  "cases": [
   {
    "name": "turn one switch on: its filter goes to the end of the top-level and list, comments and quotes stay",
@@ -283,6 +283,1034 @@
     []
    ],
    "expected": "# Tasks board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only task notes\n    - 'priority != \"low\"'\n    - status == \"doing\"\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - status == \"todo\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n        - label: Doing\n          filter: status == \"doing\"\n        - label: Done\n          filter: status == \"done\"\n  default:\n    - Status/Doing\n    - Nope/Gone\n"
+  },
+  {
+   "name": "quick filter 1: status is todo goes to the end of the top-level and list; the base gets only the item",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick",
+    [
+     "status",
+     "is",
+     "todo",
+     [
+      "todo",
+      "done"
+     ],
+     false
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\")\n    - status == \"todo\"\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 2: is on a list property uses list().contains()",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick",
+    [
+     "tags",
+     "is",
+     "work",
+     [
+      [
+       "work",
+       "home"
+      ],
+      [
+       "work"
+      ]
+     ],
+     false
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\")\n    - list(tags).contains(\"work\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 3: contains text on a property with a space uses note[\"...\"] and lowercase text",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick",
+    [
+     "my author",
+     "contains",
+     "Le",
+     [],
+     false
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\")\n    - note[\"my author\"].toString().lower().contains(\"le\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 5: free, a second quick filter replaces the first one",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      false
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\")\n    - area == \"work\"\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 5: Pro, a second quick filter adds a second and item",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\")\n    - status == \"todo\"\n    - area == \"work\"\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 5: Pro, a sixth quick filter is refused",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "p1",
+      "is",
+      "x",
+      [
+       "x"
+      ],
+      true
+     ],
+     [
+      "add",
+      "p2",
+      "is",
+      "x",
+      [
+       "x"
+      ],
+      true
+     ],
+     [
+      "add",
+      "p3",
+      "is",
+      "x",
+      [
+       "x"
+      ],
+      true
+     ],
+     [
+      "add",
+      "p4",
+      "is",
+      "x",
+      [
+       "x"
+      ],
+      true
+     ],
+     [
+      "add",
+      "p5",
+      "is",
+      "x",
+      [
+       "x"
+      ],
+      true
+     ],
+     [
+      "add",
+      "p6",
+      "is",
+      "x",
+      [
+       "x"
+      ],
+      true
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\")\n    - p1 == \"x\"\n    - p2 == \"x\"\n    - p3 == \"x\"\n    - p4 == \"x\"\n    - p5 == \"x\"\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 6: a bare string filter gets an and list that keeps the old filter first",
+   "args": [
+    "filters: file.hasTag(\"book\")\nviews:\n  - type: table\n    name: All\n",
+    "quick",
+    [
+     "status",
+     "is",
+     "todo",
+     [
+      "todo"
+     ],
+     false
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.hasTag(\"book\")\n    - status == \"todo\"\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 6: an or filter gets an and list that keeps the old filter first",
+   "args": [
+    "filters:\n  or:\n    - file.hasTag(\"book\")\n    - file.hasTag(\"paper\")\n",
+    "quick",
+    [
+     "status",
+     "is",
+     "todo",
+     [
+      "todo"
+     ],
+     false
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - or:\n        - file.hasTag(\"book\")\n        - file.hasTag(\"paper\")\n    - status == \"todo\"\n"
+  },
+  {
+   "name": "quick filter 7: switches, pauses, presets, the default and view filters stay; only the filter item is new",
+   "args": [
+    "# Task board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only tasks\n    - status == \"todo\"\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - priority == \"high\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n    - name: Priority\n      switches:\n        - label: High\n          filter: priority == \"high\"\n  presets:\n    - name: Open\n      on: [Status/Todo]\n  default: [Status/Todo]\n  paused:\n    Priority: [High]\n",
+    "quick",
+    [
+     "area",
+     "is",
+     "work",
+     [
+      "work"
+     ],
+     true
+    ]
+   ],
+   "expected": "# Task board\nfilters:\n  and:\n    - file.inFolder(\"Tasks\") # only tasks\n    - status == \"todo\"\n    - area == \"work\"\nviews:\n  - type: table\n    name: All\n    filters:\n      and:\n        - priority == \"high\"\nfilterSwitches:\n  groups:\n    - name: Status\n      switches:\n        - label: Todo\n          filter: status == \"todo\"\n    - name: Priority\n      switches:\n        - label: High\n          filter: priority == \"high\"\n  presets:\n    - name: Open\n      on: [Status/Todo]\n  default: [Status/Todo]\n  paused:\n    Priority: [High]\n"
+  },
+  {
+   "name": "quick filter 4: add then remove on a bare string filter gives back the original bytes",
+   "args": [
+    "filters: file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters: file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed newest first on a bare string filter gives back the original bytes",
+   "args": [
+    "filters: file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters: file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed oldest first on a bare string filter gives back the original bytes",
+   "args": [
+    "filters: file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ]
+    ]
+   ],
+   "expected": "filters: file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: add then remove on an or filter gives back the original bytes",
+   "args": [
+    "filters:\n  or:\n    - file.hasTag(\"book\")\n    - file.hasTag(\"paper\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  or:\n    - file.hasTag(\"book\")\n    - file.hasTag(\"paper\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed newest first on an or filter gives back the original bytes",
+   "args": [
+    "filters:\n  or:\n    - file.hasTag(\"book\")\n    - file.hasTag(\"paper\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  or:\n    - file.hasTag(\"book\")\n    - file.hasTag(\"paper\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed oldest first on an or filter gives back the original bytes",
+   "args": [
+    "filters:\n  or:\n    - file.hasTag(\"book\")\n    - file.hasTag(\"paper\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  or:\n    - file.hasTag(\"book\")\n    - file.hasTag(\"paper\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: add then remove on an empty filters key gives back the original bytes",
+   "args": [
+    "filters:\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed newest first on an empty filters key gives back the original bytes",
+   "args": [
+    "filters:\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed oldest first on an empty filters key gives back the original bytes",
+   "args": [
+    "filters:\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ]
+    ]
+   ],
+   "expected": "filters:\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: add then remove on an empty and key gives back the original bytes",
+   "args": [
+    "filters:\n  and:\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed newest first on an empty and key gives back the original bytes",
+   "args": [
+    "filters:\n  and:\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed oldest first on an empty and key gives back the original bytes",
+   "args": [
+    "filters:\n  and:\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: add then remove on no filters gives back the original bytes",
+   "args": [
+    "# Reading list\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "# Reading list\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed newest first on no filters gives back the original bytes",
+   "args": [
+    "# Reading list\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "# Reading list\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed oldest first on no filters gives back the original bytes",
+   "args": [
+    "# Reading list\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ]
+    ]
+   ],
+   "expected": "# Reading list\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: add then remove on an and list with a comment gives back the original bytes",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\") # only tasks\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\") # only tasks\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed newest first on an and list with a comment gives back the original bytes",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\") # only tasks\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\") # only tasks\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed oldest first on an and list with a comment gives back the original bytes",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\") # only tasks\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\") # only tasks\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 4: add then remove on CRLF line endings and 4-space indents gives back the original bytes",
+   "args": [
+    "filters:\r\n    and:\r\n    - status == \"a\"\r\nviews:\r\n    - type: table\r\n      name: All\r\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\r\n    and:\r\n    - status == \"a\"\r\nviews:\r\n    - type: table\r\n      name: All\r\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed newest first on CRLF line endings and 4-space indents gives back the original bytes",
+   "args": [
+    "filters:\r\n    and:\r\n    - status == \"a\"\r\nviews:\r\n    - type: table\r\n      name: All\r\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\r\n    and:\r\n    - status == \"a\"\r\nviews:\r\n    - type: table\r\n      name: All\r\n"
+  },
+  {
+   "name": "quick filter 4: two Pro filters removed oldest first on CRLF line endings and 4-space indents gives back the original bytes",
+   "args": [
+    "filters:\r\n    and:\r\n    - status == \"a\"\r\nviews:\r\n    - type: table\r\n      name: All\r\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ],
+     [
+      "remove",
+      "area == \"work\""
+     ]
+    ]
+   ],
+   "expected": "filters:\r\n    and:\r\n    - status == \"a\"\r\nviews:\r\n    - type: table\r\n      name: All\r\n"
+  },
+  {
+   "name": "quick filter 4: clear after two Pro filters gives back the original bytes",
+   "args": [
+    "filters: file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      true
+     ],
+     [
+      "add",
+      "area",
+      "is",
+      "work",
+      [
+       "work"
+      ],
+      true
+     ],
+     [
+      "clear"
+     ]
+    ]
+   ],
+   "expected": "filters: file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 16: a hand edit of the filters after the add: remove takes only its own item and writes no old text back",
+   "args": [
+    "filters: file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "edit",
+      "file.inFolder(\"Tasks\")",
+      "file.inFolder(\"Other\")"
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Other\")\nviews:\n  - type: table\n    name: All\n"
+  },
+  {
+   "name": "quick filter 16: the quick item edited by hand stays as a hand-typed filter",
+   "args": [
+    "filters:\n  and:\n    - file.inFolder(\"Tasks\")\nviews:\n  - type: table\n    name: All\n",
+    "quick-steps",
+    [
+     [
+      "add",
+      "status",
+      "is",
+      "todo",
+      [
+       "todo"
+      ],
+      false
+     ],
+     [
+      "edit",
+      "status == \"todo\"",
+      "status == \"todo\" || status == \"doing\""
+     ],
+     [
+      "remove",
+      "status == \"todo\""
+     ]
+    ]
+   ],
+   "expected": "filters:\n  and:\n    - file.inFolder(\"Tasks\")\n    - status == \"todo\" || status == \"doing\"\nviews:\n  - type: table\n    name: All\n"
   }
  ]
 }

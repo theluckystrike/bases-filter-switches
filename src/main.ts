@@ -1,20 +1,28 @@
 import { debounce, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, type App, type FileView, type SettingDefinitionItem } from 'obsidian';
 import {
+	activeQuick,
 	addPropertyGroup,
+	addQuick,
 	addSwitch,
 	applySelection,
 	clearDefault,
 	clearPaused,
+	clearQuick,
 	defaultSelection,
 	editSwitch,
 	FREE_GROUPS,
+	FREE_QUICK,
 	FREE_SWITCHES,
 	hasDefault,
 	presetSelection,
+	PRO_QUICK,
+	quickProperties,
+	quickValues,
 	readConfig,
 	readDefault,
 	readSelection,
 	removePreset,
+	removeQuick,
 	removeSwitch,
 	reset,
 	saveDefault,
@@ -24,11 +32,17 @@ import {
 	toggle,
 	toggleGroupPaused,
 	topFilters,
+	visibleProperties,
 	type GroupDef,
 	type PresetDef,
+	type QuickFilter,
+	type QuickInput,
+	type QuickMatch,
+	type QuickState,
 	type SwitchConfig,
 } from './basefile';
 import { SwitchBar, type BarHost } from './bar';
+import { QuickFilterModal } from './quick-modal';
 import type { SponsorsManager } from './license/index';
 import { createGitHubSponsors, sponsorsSettingItems } from './license/github-obsidian';
 import { bindPro, isPro, onProChange, PRO_UI, SPONSORS } from './pro';
@@ -41,8 +55,23 @@ const PRO_TICK_MS = 6 * 60 * 60 * 1000;
 
 export interface FilterSwitchSettings {
 	showAdd: boolean;
+	/** Quick filters per base file path: the chips and the undo data. The base file holds only the filter items. */
+	quick: Record<string, QuickState>;
 }
-export const DEFAULT_SETTINGS: FilterSwitchSettings = { showAdd: true };
+export const DEFAULT_SETTINGS: FilterSwitchSettings = { showAdd: true, quick: {} };
+
+/** The saved quick filter state of one base, or null when the data is not in the expected form. */
+export function parseQuickState(v: unknown): QuickState | null {
+	if (v === null || typeof v !== 'object') return null;
+	const r = v as Record<string, unknown>;
+	const chips = (Array.isArray(r.chips) ? r.chips : []).flatMap((c): QuickFilter[] => {
+		const q = c as Record<string, unknown> | null;
+		const ok = q && typeof q.id === 'string' && typeof q.property === 'string' && typeof q.value === 'string' && typeof q.filter === 'string' && (q.match === 'is' || q.match === 'contains');
+		return ok ? [{ id: q.id as string, property: q.property as string, match: q.match as QuickMatch, value: q.value as string, filter: q.filter as string }] : [];
+	});
+	if (chips.length === 0 || typeof r.live !== 'string') return null;
+	return { chips, origin: typeof r.origin === 'string' ? r.origin : null, live: r.live };
+}
 
 const isBase = (f: unknown): f is TFile => f instanceof TFile && f.extension === 'base';
 
@@ -83,7 +112,34 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 
 	async loadSettings(): Promise<void> {
 		const data = ((await this.loadData()) ?? {}) as Partial<FilterSwitchSettings>;
-		this.settings = { showAdd: data.showAdd !== false };
+		const quick: Record<string, QuickState> = {};
+		for (const [path, v] of Object.entries(data.quick && typeof data.quick === 'object' ? data.quick : {})) {
+			const state = parseQuickState(v);
+			if (state) quick[path] = state;
+		}
+		this.settings = { showAdd: data.showAdd !== false, quick };
+	}
+
+	async saveSettings(): Promise<void> {
+		await this.saveData(this.settings);
+	}
+
+	quickState(file: TFile): QuickState | null {
+		return this.settings.quick[file.path] ?? null;
+	}
+
+	private setQuickState(path: string, state: QuickState | null): void {
+		if (state) this.settings.quick[path] = state;
+		else delete this.settings.quick[path];
+	}
+
+	/** A renamed base keeps its quick filters. A deleted base drops them. */
+	private moveQuick(oldPath: string, newPath: string | null): void {
+		const state = this.settings.quick[oldPath];
+		if (!state) return;
+		delete this.settings.quick[oldPath];
+		if (newPath !== null) this.settings.quick[newPath] = state;
+		void this.saveSettings();
 	}
 
 	/** Pro from the cached GitHub Sponsors answer. Never sends a request. */
@@ -109,8 +165,18 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 				presets();
 			}),
 		);
-		this.registerEvent(this.app.vault.on('rename', () => presets()));
-		this.registerEvent(this.app.vault.on('delete', () => presets()));
+		this.registerEvent(
+			this.app.vault.on('rename', (f, oldPath) => {
+				this.moveQuick(oldPath, f.path);
+				presets();
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on('delete', (f) => {
+				this.moveQuick(f.path, null);
+				presets();
+			}),
+		);
 		this.registerEvent(this.app.metadataCache.on('changed', () => values()));
 		// Bars of an earlier instance of the plugin (a reload) are removed before the first scan.
 		this.app.workspace.containerEl.querySelectorAll('.fsw-bar').forEach((el) => el.remove());
@@ -315,6 +381,62 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 		return true;
 	}
 
+	// ---- quick property filter ----
+
+	quickFilter(file: TFile, view: string | null): void {
+		void this.openQuickModal(file, view);
+	}
+
+	private async openQuickModal(file: TFile, view: string | null): Promise<void> {
+		const properties = quickProperties(visibleProperties(await this.read(file), view), this.propertyNames());
+		new QuickFilterModal(this.app, properties, (p) => quickValues(p, this.valuesOf(p)), (input) => this.saveQuick(file, input)).open();
+	}
+
+	/** Free: one quick filter, a new one replaces it. Pro: up to 5 joined with "and". */
+	async saveQuick(file: TFile, input: QuickInput): Promise<boolean> {
+		const values = this.valuesOf(input.property);
+		const pro = isPro();
+		const replaced = !pro && activeQuick(await this.read(file), this.quickState(file)).length > 0;
+		let error: string | null = null;
+		let changed = false;
+		// The state is set inside the write, so the redraw after the file change already shows the chip.
+		await this.write(file, (t) => {
+			const r = addQuick(t, this.resolve(readConfig(t)).groups, input, values, pro ? PRO_QUICK : FREE_QUICK, this.quickState(file));
+			error = r.error;
+			changed = r.text !== t;
+			if (r.error === null) this.setQuickState(file.path, r.state);
+			return r.text;
+		});
+		if (error !== null) {
+			new Notice(error);
+			return false;
+		}
+		await this.saveSettings();
+		this.refreshFile(file);
+		if (changed && replaced) new Notice(`The free version has ${FREE_QUICK} quick filter, so the new one replaced the old one. Pro joins up to ${PRO_QUICK}.`);
+		return changed;
+	}
+
+	async removeQuick(file: TFile, id: string): Promise<void> {
+		await this.write(file, (t) => {
+			const r = removeQuick(t, this.quickState(file), id);
+			this.setQuickState(file.path, r.state);
+			return r.text;
+		});
+		await this.saveSettings();
+		this.refreshFile(file);
+	}
+
+	async clearQuick(file: TFile): Promise<void> {
+		await this.write(file, (t) => {
+			const r = clearQuick(t, this.quickState(file));
+			this.setQuickState(file.path, r.state);
+			return r.text;
+		});
+		await this.saveSettings();
+		this.refreshFile(file);
+	}
+
 	addPropertyGroup(file: TFile): void {
 		if (!this.needPro('Switches from a property')) return;
 		new PropertyModal(this.app, this.propertyNames(), async (property, single) => {
@@ -364,6 +486,8 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 		onBase('save-default', 'Save the current switches as the default of the current base', (f) => void this.saveDefault(f));
 		onBase('clear-default', 'Clear the saved default switches of the current base', (f) => void this.clearDefault(f));
 		onBase('add-property-group', 'Add switches from the values of a property', (f) => this.addPropertyGroup(f));
+		onBase('quick-filter', 'Filter the current base by a property', (f) => this.quickFilter(f, null));
+		onBase('clear-quick-filters', 'Clear quick filters of the current base', (f) => void this.clearQuick(f));
 	}
 
 	/** One command per preset of every base (Pro). Ids are stable: path + preset name. */
@@ -545,7 +669,7 @@ class FilterSwitchSettingTab extends PluginSettingTab {
 			...(this.plugin.pro ? sponsorsSettingItems(this.plugin.pro, PRO_UI) : []),
 			{
 				name: 'Show the add button on bases without switches',
-				desc: `A small add button under the toolbar of every base that has no switches yet. The free version has ${FREE_SWITCHES} switches in ${FREE_GROUPS} group per base.`,
+				desc: `A small add button and the Filter by property button under the toolbar of every base that has no switches yet. The free version has ${FREE_SWITCHES} switches in ${FREE_GROUPS} group per base.`,
 				control: { type: 'toggle', key: 'showAdd', defaultValue: DEFAULT_SETTINGS.showAdd },
 			},
 		];

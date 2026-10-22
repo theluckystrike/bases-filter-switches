@@ -69,6 +69,45 @@
 	color: var(--text-faint);
 }
 
+.fsw-bar button.fsw-quick {
+	display: inline-flex;
+	align-items: center;
+	color: var(--text-muted);
+}
+
+.fsw-quick-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-1);
+	padding: 0 var(--size-2-1) 0 var(--size-4-2);
+	border-radius: var(--radius-l);
+	border: var(--border-width) solid var(--interactive-accent);
+	color: var(--text-normal);
+	line-height: var(--line-height-tight);
+}
+
+.fsw-bar button.fsw-quick-remove {
+	display: inline-flex;
+	align-items: center;
+	height: auto;
+	padding: var(--size-2-1);
+	border: none;
+	background-color: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+	cursor: var(--cursor);
+}
+
+.fsw-bar button.fsw-quick-remove:hover {
+	color: var(--text-normal);
+}
+
+.fsw-bar button.fsw-quick svg,
+.fsw-bar button.fsw-quick-remove svg {
+	width: var(--icon-xs);
+	height: var(--icon-xs);
+}
+
 /* NoteMods What's new tab and settings card */
 .notemods-hello {
 	overflow-y: auto;
