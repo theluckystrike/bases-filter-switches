@@ -1,5 +1,6 @@
 {
 	"name": "bases-filter-switches",
+	"repository": {"type": "git", "url": "theluckystrike/bases-filter-switches.git"},
 	"version": "1.4.0",
 	"private": true,
 	"description": "One-click switches above a base that turn saved filters on and off, in base tabs and embedded bases.",
