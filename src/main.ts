@@ -45,7 +45,7 @@ import { SwitchBar, type BarHost } from './bar';
 import { QuickFilterModal } from './quick-modal';
 import type { SponsorsManager } from './license/index';
 import { createGitHubSponsors, sponsorsSettingItems } from './license/github-obsidian';
-import { bindPro, isPro, onProChange, PRO_UI, SPONSORS } from './pro';
+import { bindPro, isPro, onProChange, PRO_UI, proNotice, SPONSORS } from './pro';
 import { setupHello } from './hello/index';
 import WHATS_NEW from './whats-new.json';
 import { helloSettingItems } from './hello/settings';
@@ -452,7 +452,7 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 
 	needPro(what: string): boolean {
 		if (isPro()) return true;
-		new Notice(`${what}: a Pro feature. ${PRO_UI.priceText} See the plugin settings.`);
+		proNotice(`${what}: a Pro feature.`);
 		return false;
 	}
 

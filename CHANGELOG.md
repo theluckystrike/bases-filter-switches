@@ -1,5 +1,11 @@
 # bases-filter-switches
 
+## 1.4.1
+
+### Patch Changes
+
+- The Bases Filter Switches notice for a Pro feature now has a Sponsor on GitHub button.
+
 ## 1.4.0
 
 ### Minor Changes
