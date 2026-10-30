@@ -1,9 +1,9 @@
 {
 	"id": "bases-filter-switches",
 	"name": "Bases Filter Switches",
-	"version": "1.4.1",
+	"version": "1.4.2",
 	"changes": [
-		"The Bases Filter Switches notice for a Pro feature now has a Sponsor on GitHub button."
+		"The Sponsor on GitHub button now opens the one-time payment tab of GitHub Sponsors."
 	],
 	"tip": "To turn a filter that the base already has into a switch, select the + button and pick it under \"Use a filter of this base\".",
 	"thanks": "Hi, I am Michael, a solo developer in Poland. Bases Filter Switches is one of over 100 small plugins that I make. Thank you for using it with Bases. Bases is still new, and your setups teach me a lot.",
