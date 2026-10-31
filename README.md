@@ -10,7 +10,7 @@ The free version gives each base one group of up to 3 switches and one quick pro
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/bases-filter-switches.gif" alt="Clicking Todo, then Doing, then All, then Done above a base of tasks; the rows change after each click" width="720">
 
-Pro costs $15 one time or $5 a month. Choose [GitHub Sponsors](https://github.com/sponsors/theluckystrike?metadata_source=bases-filter-switches) or the [$15 one-time offer](https://github.com/sponsors/theluckystrike/sponsorships?tier_id=666162&metadata_source=bases-filter-switches).
+Pro costs $15 one time or $5 a month. Choose [GitHub Sponsors](https://github.com/sponsors/theluckystrike?frequency=one-time&metadata_source=bases-filter-switches) or the [$15 one-time offer](https://github.com/sponsors/theluckystrike/sponsorships?tier_id=666162&metadata_source=bases-filter-switches).
 
 ### Switches above a base
 
@@ -135,7 +135,7 @@ No. The plugin only edits base files. Embed a base file with `![[name.base]]`.
 
 The core features are free. Pro features need a GitHub Sponsors sponsorship of theluckystrike: $5 a month or more, or $15 once. A total payment of $15 meets the payment requirement for Pro without further payment. Sign-in and the checks below still apply. Your notes stay readable and editable with or without Pro.
 
-GitHub handles the payment. Sponsor at https://github.com/sponsors/theluckystrike. You need no account for the free features. Pro needs the GitHub account that sponsors.
+GitHub handles the payment. Sponsor at https://github.com/sponsors/theluckystrike?frequency=one-time&metadata_source=bases-filter-switches. You need no account for the free features. Pro needs the GitHub account that sponsors.
 
 Until you select "Sign in with GitHub" in the settings, Bases Filter Switches makes no network requests. Sign in uses the GitHub device flow. Bases Filter Switches sends its public client ID and the scope `read:user` to `https://github.com/login/device/code` and shows you a code. While you enter the code at https://github.com/login/device, it asks `https://github.com/login/oauth/access_token` every few seconds to check the sign-in status. The scope permits profile reads only. GitHub needs this access to show the sponsorship tier. It grants no repository scope and no write access.
 
