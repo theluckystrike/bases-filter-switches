@@ -44,8 +44,9 @@ import {
 import { SwitchBar, type BarHost } from './bar';
 import { QuickFilterModal } from './quick-modal';
 import type { SponsorsManager } from './license/index';
-import { createGitHubSponsors, sponsorsSettingItems } from './license/github-obsidian';
-import { bindPro, isPro, onProChange, PRO_UI, proNotice, SPONSORS } from './pro';
+import { WHAT_PRO_TITLE, createGitHubSponsors, sponsorsSettingItemsWithWhatPro } from './license/github-obsidian';
+import { bindPro, bindWhatPro, isPro, onProChange, PRO_UI, proNotice, SPONSORS } from './pro';
+import { openWhatPro } from './what-pro';
 import { setupHello } from './hello/index';
 import WHATS_NEW from './whats-new.json';
 import { helloSettingItems } from './hello/settings';
@@ -95,6 +96,7 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 		pro.init();
 		this.pro = pro;
 		bindPro(pro);
+		bindWhatPro(() => this.openWhatPro());
 		this.register(onProChange(() => this.onPro()));
 		this.settingTab = new FilterSwitchSettingTab(this.app, this);
 		this.addSettingTab(this.settingTab);
@@ -105,6 +107,7 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 	onunload(): void {
 		this.stopped = true;
 		bindPro(null);
+		bindWhatPro(null);
 		this.observer?.disconnect();
 		for (const bar of this.bars.values()) bar.destroy();
 		this.bars.clear();
@@ -140,6 +143,11 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 		delete this.settings.quick[oldPath];
 		if (newPath !== null) this.settings.quick[newPath] = state;
 		void this.saveSettings();
+	}
+
+	/** The "What Pro adds" window: each Pro feature with a demo on a sample base, the price and the sign in. */
+	openWhatPro(): void {
+		openWhatPro(this.app, this.pro, this.manifest.id, this.manifest.name);
 	}
 
 	/** Pro from the cached GitHub Sponsors answer. Never sends a request. */
@@ -488,6 +496,8 @@ export default class BasesFilterSwitchesPlugin extends Plugin implements BarHost
 		onBase('add-property-group', 'Add switches from the values of a property', (f) => this.addPropertyGroup(f));
 		onBase('quick-filter', 'Filter the current base by a property', (f) => this.quickFilter(f, null));
 		onBase('clear-quick-filters', 'Clear quick filters of the current base', (f) => void this.clearQuick(f));
+		// Opens only on this command, the settings button or the link in the Pro notice. Never at startup.
+		this.addCommand({ id: 'what-pro-adds', name: WHAT_PRO_TITLE, callback: () => this.openWhatPro() });
 	}
 
 	/** One command per preset of every base (Pro). Ids are stable: path + preset name. */
@@ -666,7 +676,7 @@ class FilterSwitchSettingTab extends PluginSettingTab {
 
 	productSettingDefinitions(): SettingDefinitionItem[] {
 		return [
-			...(this.plugin.pro ? sponsorsSettingItems(this.plugin.pro, PRO_UI) : []),
+			...(this.plugin.pro ? sponsorsSettingItemsWithWhatPro(this.plugin.pro, PRO_UI, () => this.plugin.openWhatPro()) : []),
 			{
 				name: 'Show the add button on bases without switches',
 				desc: `A small add button and the Filter by property button under the toolbar of every base that has no switches yet. The free version has ${FREE_SWITCHES} switches in ${FREE_GROUPS} group per base.`,

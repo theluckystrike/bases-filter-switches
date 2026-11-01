@@ -1,5 +1,11 @@
 # bases-filter-switches
 
+## 1.4.3
+
+### Patch Changes
+
+- 2bdf5e2: Add the "What Pro adds" window. It lists each Pro feature with a "Try it" demo on a sample base, the price, a "Sponsor $15 once" button and "Sign in with GitHub". Open it with the command "What Pro adds", the button in the Pro section of the settings, or the link in the Pro notice. It never opens by itself.
+
 ## 1.4.2
 
 ### Patch Changes

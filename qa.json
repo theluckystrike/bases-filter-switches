@@ -106,5 +106,13 @@
 		"eval": "(async () => { await new Promise((r) => setTimeout(r, 700)); const bar = [...document.querySelectorAll('.workspace-leaf.mod-active .fsw-bar')].find((b) => b.offsetParent); bar.querySelector('.fsw-quick').click(); await new Promise((r) => setTimeout(r, 500)); const [property, match] = [...document.querySelectorAll('.fsw-quick-modal select.dropdown:not(.is-measuring)')]; property.value = 'area'; property.dispatchEvent(new Event('change')); match.value = 'is'; match.dispatchEvent(new Event('change')); const input = document.querySelector('.fsw-quick-modal input'); input.value = 'work'; input.dispatchEvent(new Event('input')); document.querySelector('.fsw-quick-modal button.mod-cta').click(); await new Promise((r) => setTimeout(r, 900)); if (!bar.querySelector('.fsw-quick-chip')) throw new Error('no quick filter chip'); document.querySelectorAll('.suggestion-container').forEach((s) => s.remove()); return 'ok'; })()",
 		"after": "(async () => { const f = app.vault.getAbstractFileByPath('Bases Filter Switches/Tasks.base'); if (f) await app.plugins.plugins['bases-filter-switches'].clearQuick(f); return 'ok'; })()",
 		"wait": 900
+	},
+	{
+		"feature": "what-pro",
+		"caption": "The command \"What Pro adds\" lists each Pro feature with a Try it demo, the price, Sponsor $15 once and Sign in with GitHub.",
+		"note": "Tasks.base",
+		"eval": "(async () => { document.querySelectorAll('.modal-container').forEach(el => el.remove()); app.commands.executeCommandById('bases-filter-switches:what-pro-adds'); await new Promise(r=>setTimeout(r,600)); const m=document.querySelector('.modal.pf-whatpro'); if(!m) throw new Error('What Pro adds did not open'); const b=Array.from(m.querySelectorAll('button')).map(x=>x.textContent); if(!b.includes('Sponsor $15 once')||!b.includes('Sign in with GitHub')) throw new Error('Missing buttons: '+b.join(',')); m.querySelector('.pf-whatpro-feature button').click(); await new Promise(r=>setTimeout(r,500)); const d=m.querySelector('.pf-whatpro-demo'); if(!d || d.textContent.includes('could not run') || (d.textContent.trim()==='' && !d.querySelector('svg, table'))) throw new Error('No demo'); return 'ok'; })()",
+		"after": "(async () => { document.querySelectorAll('.modal-container').forEach(el => el.remove()); return 'ok'; })()",
+		"wait": 700
 	}
 ]

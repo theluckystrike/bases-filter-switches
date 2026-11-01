@@ -1,10 +1,10 @@
 # Bases Filter Switches
 
-Bases Filter Switches puts a row of one-click switches under the toolbar of a base. Each switch is a saved filter, such as "Todo" for `status == "todo"`. Click it and the base shows only those notes. Click again to remove the filter. You do not open the filter editor, and you do not need one view for each mix of filters.
+Bases Filter Switches puts a row of one-click switches under the toolbar of a base. Each switch is a saved filter, such as "Todo" for `status == "todo"`. Click it to show only those notes. Click again to remove the filter. You need no filter editor and no view for each mix of filters.
 
 Each switch changes the base file filters, not one view.
 
-The free version gives each base one group of up to 3 switches and one quick property filter. Pro removes the switch limits, allows up to 5 quick filters, and adds presets with commands, default switches, and switches from property values.
+The free version gives each base one group of up to 3 switches and one quick property filter.
 
 ## Features
 
@@ -22,7 +22,7 @@ Each switch is a real filter. When a switch is on, its filter is in the top-leve
 
 ### Pause and resume a group
 
-Select "Pause" beside the group name to remove that group's active filters. Select "Resume" to put the saved selection back. The base file keeps the paused labels, so you can close and reopen it before you resume. This control is free.
+Select "Pause" beside the group name to remove that group's active filters. Select "Resume" to put the saved selection back. The base file keeps the paused labels, so you can close and reopen it before you resume.
 
 "All", a switch click, a preset or the default replaces a saved pause. Other groups and view filters stay as they are.
 
@@ -34,7 +34,7 @@ Select "Pause" beside the group name to remove that group's active filters. Sele
 
 Select the filter button at the end of the bar, or run "Filter the current base by a property". Choose a property from your vault, then "is" or "contains text", then a value. For "is", the list shows the values that notes have now. The filter goes to the end of the top-level filters and shows as a chip, such as `author: Le Guin`. Select × on the chip to remove it. "Clear quick filters" in the Presets menu or as a command removes all of them.
 
-The chips stay in the plugin data, not in the base file. Presets and default switches do not save quick filters. A quick filter edited by hand becomes a normal filter. The free version has one quick filter at a time, so a new one replaces the old one. Pro joins up to 5 with "and". The window works with Tab, the arrow keys, Enter and Escape.
+The chips stay in the plugin data, not in the base file. Presets and default switches do not save quick filters. A quick filter edited by hand becomes a normal filter. Free: a new quick filter replaces the old one. The window works with Tab, the arrow keys, Enter and Escape.
 
 ### Embedded bases
 
@@ -52,25 +52,25 @@ Select the + button, or run "Add a filter switch to the current base". Type a gr
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/light-theme.png" alt="The switch row in the light theme with the Doing switch on" width="720">
 
-The switches take their colors from your theme, in light and dark mode. A switch that is on has the accent color. Press Tab to reach the row. Use the arrow keys, Home and End to move between buttons. Press Enter or Space to toggle a switch.
+A switch that is on has the accent color of your theme, in light and dark mode. Press Tab to reach the row. Use the arrow keys, Home and End to move between buttons. Press Enter or Space to toggle a switch.
 
 ### Switches from the values of a property (Pro)
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/property-values.png" alt="An Area group with one switch for each value of the area property: home, learning and work" width="720">
 
-Run "Add switches from the values of a property" and choose a property such as `area`. The group gets one switch for each value that notes have now, and new values show up by themselves. For a property with list values, the switches use `list(property).contains(value)`. You can make the group "one at a time", so a click on one switch turns the others off.
+Run "Add switches from the values of a property" and choose a property such as `area`. New values show up by themselves. For a property with list values, the switches use `list(property).contains(value)`. You can make the group "one at a time", so a click on one switch turns the others off.
 
 ### Presets (Pro)
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/presets.png" alt="The preset Open work applied from its command: Todo, Doing and work are on and the base shows 4 notes" width="720">
 
-A preset saves which switches are on, in each group, under one name. Choose it from the Presets menu to set the switches of each group at once. Each preset also gets a command, so you can give it a hotkey.
+Choose a preset from the Presets menu to set each group at once. You can give the command of a preset a hotkey.
 
 ### Default switches (Pro)
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/default-switches.png" alt="A base of tasks after the command that applies the saved default: Todo is on again and the base shows 5 notes" width="720">
 
-Select "Save switches as the default" in the Presets menu to save the switches that are on now. "Apply the default switches", in the menu or as a command, turns them back on. "Clear the saved default" removes it.
+Use "Save switches as the default" and "Apply the default switches" in the Presets menu. "Clear the saved default" removes it.
 
 ## Install
 
@@ -100,6 +100,18 @@ filterSwitches:
 ```
 
 ## Pro
+
+The command "What Pro adds" shows each with a demo.
+
+<img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/what-pro.png" alt="The What Pro adds window with a Try it demo" width="720">
+
+- Add any number of switches and groups to a base. The free version has 1 group of 3 switches.
+- Save the switches that are on as a preset. Apply it from the bar or from its own command.
+- Save the default switches of a base, and apply them again with one command.
+- Make one switch for each value of a property.
+- Use up to 5 quick property filters at the same time. The free version has 1.
+
+Sponsor $5 a month, or $15 once. When you have paid $15 in total, Pro stays on.
 
 <img src="https://raw.githubusercontent.com/theluckystrike/bases-filter-switches/HEAD/docs/pro-settings.png" alt="The Pro section of the settings after sign in, with the GitHub account and the Pro status" width="720">
 
