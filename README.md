@@ -1,6 +1,6 @@
 # Bases Filter Switches
 
-Bases Filter Switches puts a row of one-click switches under the toolbar of a base. Each switch is a saved filter, such as "Todo" for `status == "todo"`. Click it to show only those notes. Click again to remove the filter. You need no filter editor and no view for each mix of filters.
+Bases Filter Switches puts a row of one-click switches under the toolbar of a base. Each switch is a saved filter, such as "Todo" for `status == "todo"`. Click it to show only those notes. Click again to remove the filter.
 
 Each switch changes the base file filters, not one view.
 
@@ -146,6 +146,8 @@ No. The plugin only edits base files. Embed a base file with `![[name.base]]`.
 ## Payment, account and network
 
 The core features are free. Pro features need a GitHub Sponsors sponsorship of theluckystrike: $5 a month or more, or $15 once. A total payment of $15 meets the payment requirement for Pro without further payment. Sign-in and the checks below still apply. Your notes stay readable and editable with or without Pro.
+
+[One payment turns on Pro in every NoteMods plugin](https://notemods.com/pro/).
 
 GitHub handles the payment. Sponsor at https://github.com/sponsors/theluckystrike?frequency=one-time&metadata_source=bases-filter-switches. You need no account for the free features. Pro needs the GitHub account that sponsors.
 

@@ -52,7 +52,7 @@ describe('What Pro adds: price and button', () => {
 	it('the Sponsor $15 once button opens the one-time tab with metadata_source=<plugin id>-whatpro', () => {
 		const m = whatProModel(null, { pluginId: manifest.id, features: PRO_FEATURES, priceText: PRO_UI.priceText }, SPONSORS);
 		expect(m.sponsorText).toBe('Sponsor $15 once');
-		expect(m.sponsorUrl).toBe('https://github.com/sponsors/theluckystrike?frequency=one-time&metadata_source=bases-filter-switches-whatpro');
+		expect(m.sponsorUrl).toBe('https://github.com/sponsors/theluckystrike?frequency=one-time&metadata_source=bases-filter-switches-whatpro-all');
 		expect(m.sponsorUrl).toBe(whatProUrl(SPONSORS, manifest.id));
 		expect(m.priceText).toBe(PRO_UI.priceText);
 	});

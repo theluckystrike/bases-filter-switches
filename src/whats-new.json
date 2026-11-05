@@ -1,10 +1,9 @@
 {
 	"id": "bases-filter-switches",
 	"name": "Bases Filter Switches",
-	"version": "1.4.3",
+	"version": "1.4.4",
 	"changes": [
-		"New command \"What Pro adds\": read each Pro feature and try it on a sample base.",
-		"The Pro section of the settings and the Pro notice also open \"What Pro adds\"."
+		"The Pro notice of Bases Filter Switches now says that one payment turns on Pro in every NoteMods plugin."
 	],
 	"tip": "To turn a filter that the base already has into a switch, select the + button and pick it under \"Use a filter of this base\".",
 	"thanks": "Hi, I am Michael, a solo developer in Poland. Bases Filter Switches is one of over 100 small plugins that I make. Thank you for using it with Bases. Bases is still new, and your setups teach me a lot.",

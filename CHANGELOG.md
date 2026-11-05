@@ -1,5 +1,11 @@
 # bases-filter-switches
 
+## 1.4.4
+
+### Patch Changes
+
+- The Pro notice of Bases Filter Switches now says that one payment turns on Pro in every NoteMods plugin.
+
 ## 1.4.3
 
 ### Patch Changes
