@@ -1,7 +1,7 @@
 {
 	"id": "bases-filter-switches",
 	"name": "Bases Filter Switches",
-	"version": "1.4.4",
+	"version": "1.4.5",
 	"changes": [
 		"The Pro notice of Bases Filter Switches now says that one payment turns on Pro in every NoteMods plugin."
 	],

@@ -1,5 +1,11 @@
 # bases-filter-switches
 
+## 1.4.5
+
+### Patch Changes
+
+- The Sponsor button now opens the NoteMods one-time tier.
+
 ## 1.4.4
 
 ### Patch Changes

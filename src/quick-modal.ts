@@ -116,7 +116,8 @@ export class QuickFilterModal extends Modal {
 
 	/** Enter adds the filter. On a button, Enter keeps its normal click. While the value list is open, it picks a value. */
 	handleEnter(evt: KeyboardEvent): boolean {
-		const target = evt.target instanceof HTMLElement ? evt.target : null;
+		const node = evt.targetNode;
+		const target = node?.instanceOf(HTMLElement) ? node : null;
 		if (target?.tagName === 'BUTTON') return true;
 		if (this.suggest?.shown) return true;
 		evt.preventDefault();
